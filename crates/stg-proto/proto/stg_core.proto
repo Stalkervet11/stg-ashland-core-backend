@@ -1,0 +1,656 @@
+syntax = "proto3";
+
+package stg.v1;
+
+import "google/protobuf/timestamp.proto";
+
+service STGBackend {
+  rpc Connect(stream ServerMessage) returns (stream BackendMessage);
+
+  rpc RegisterPlayer(RegisterPlayerRequest)
+      returns (RegisterPlayerResponse);
+
+  rpc GetPlayerSnapshot(GetPlayerSnapshotRequest)
+      returns (PlayerSnapshot);
+
+  rpc GetWorldSnapshot(GetWorldSnapshotRequest)
+      returns (WorldSnapshot);
+
+  rpc GetEconomyState(GetEconomyStateRequest)
+      returns (EconomyState);
+
+  rpc TransferMoney(TransferMoneyRequest)
+      returns (TransactionResult);
+
+  rpc PrepareResourceConversion(PrepareResourceConversionRequest)
+      returns (PrepareResourceConversionResponse);
+
+  rpc CommitResourceConversion(CommitResourceConversionRequest)
+      returns (TransactionResult);
+
+  rpc AbortResourceConversion(AbortResourceConversionRequest)
+      returns (AbortResourceConversionResponse);
+
+  rpc RegisterEnergyNode(RegisterEnergyNodeRequest)
+      returns (EnergyNode);
+
+  rpc ReportEnergyObservation(ReportEnergyObservationRequest)
+      returns (ReportEnergyObservationResponse);
+
+  rpc GetEnergyState(GetEnergyStateRequest)
+      returns (EnergyState);
+
+  rpc BeginTransition(BeginTransitionRequest)
+      returns (BeginTransitionResponse);
+
+  rpc ClaimTransition(ClaimTransitionRequest)
+      returns (ClaimTransitionResponse);
+
+  rpc CommitTransition(CommitTransitionRequest)
+      returns (CommitTransitionResponse);
+
+  rpc AbortTransition(AbortTransitionRequest)
+      returns (AbortTransitionResponse);
+}
+
+// ============================================================
+// COMMON
+// ============================================================
+
+message RequestContext {
+  string request_id = 1;
+  string correlation_id = 2;
+  string server_id = 3;
+}
+
+message Error {
+  ErrorCode code = 1;
+  string message = 2;
+}
+
+enum ErrorCode {
+  ERROR_CODE_UNSPECIFIED = 0;
+
+  PLAYER_NOT_FOUND = 1;
+  PLAYER_LOCKED = 2;
+  INVALID_AMOUNT = 3;
+  INSUFFICIENT_FUNDS = 4;
+
+  CURRENCY_NOT_FOUND = 10;
+  CURRENCY_DISABLED = 11;
+
+  CONVERSION_RULE_NOT_FOUND = 20;
+  QUOTE_EXPIRED = 21;
+  RESERVATION_EXPIRED = 22;
+  RESERVATION_ALREADY_COMMITTED = 23;
+
+  ENERGY_NODE_NOT_FOUND = 30;
+
+  REVISION_CONFLICT = 40;
+  DUPLICATE_REQUEST = 41;
+
+  SERVER_UNAUTHORIZED = 50;
+  SERVER_OFFLINE = 51;
+
+  TRANSITION_ALREADY_ACTIVE = 60;
+  TRANSITION_NOT_FOUND = 61;
+  TRANSITION_TICKET_INVALID = 62;
+
+  INTERNAL_ERROR = 1000;
+}
+
+// ============================================================
+// SERVER CONNECTION
+// ============================================================
+
+message ServerMessage {
+  oneof payload {
+    ServerHello hello = 1;
+    ServerHeartbeat heartbeat = 2;
+    PlayerPresenceChanged player_presence = 3;
+    EnergyNodeObservation energy_observation = 4;
+    ServerCommandResult command_result = 5;
+  }
+}
+
+message BackendMessage {
+  string event_id = 1;
+  uint64 revision = 2;
+  google.protobuf.Timestamp occurred_at = 3;
+
+  oneof payload {
+    BackendHello hello = 10;
+    WorldSnapshot world_snapshot = 11;
+    EnergyState energy_update = 12;
+    EconomyState economy_update = 13;
+    PlayerSnapshot player_update = 14;
+    WorldEvent world_event = 15;
+    BackendCommand command = 16;
+    Error error = 17;
+  }
+}
+
+message ServerHello {
+  string server_id = 1;
+  string protocol_version = 2;
+  string build_version = 3;
+}
+
+message BackendHello {
+  string world_id = 1;
+  string protocol_version = 2;
+  uint64 world_revision = 3;
+}
+
+message ServerHeartbeat {
+  string server_id = 1;
+  uint32 online_players = 2;
+  double tps = 3;
+  uint64 memory_used_bytes = 4;
+}
+
+message PlayerPresenceChanged {
+  string player_uuid = 1;
+  PlayerPresence presence = 2;
+}
+
+enum PlayerPresence {
+  PLAYER_PRESENCE_UNSPECIFIED = 0;
+  PLAYER_ONLINE = 1;
+  PLAYER_OFFLINE = 2;
+}
+
+message ServerCommandResult {
+  string command_id = 1;
+  bool success = 2;
+  optional Error error = 3;
+}
+
+message BackendCommand {
+  string command_id = 1;
+
+  oneof payload {
+    ApplyPlayerMutation apply_player_mutation = 10;
+  }
+}
+
+message ApplyPlayerMutation {
+  string player_uuid = 1;
+  repeated ResourceMutation resource_mutations = 2;
+}
+
+// ============================================================
+// PLAYER
+// ============================================================
+
+enum PlayerStatus {
+  PLAYER_STATUS_UNSPECIFIED = 0;
+  PLAYER_STATUS_ACTIVE = 1;
+  PLAYER_STATUS_LOCKED = 2;
+  PLAYER_STATUS_TRANSITIONING = 3;
+  PLAYER_STATUS_BANNED = 4;
+}
+
+message PlayerIdentity {
+  string uuid = 1;
+  string username = 2;
+  PlayerStatus status = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp last_seen_at = 5;
+}
+
+message PlayerSnapshot {
+  PlayerIdentity identity = 1;
+
+  repeated WalletBalance wallets = 2;
+
+  int64 global_reputation = 3;
+  map<string, int64> faction_reputation = 4;
+
+  map<string, int64> integer_stats = 5;
+  map<string, string> string_stats = 6;
+
+  optional string current_server_id = 7;
+  optional PlayerTransition transition = 8;
+
+  uint64 revision = 9;
+}
+
+message RegisterPlayerRequest {
+  RequestContext context = 1;
+  string player_uuid = 2;
+  string username = 3;
+}
+
+message RegisterPlayerResponse {
+  oneof result {
+    PlayerSnapshot player = 1;
+    Error error = 2;
+  }
+}
+
+message GetPlayerSnapshotRequest {
+  RequestContext context = 1;
+  string player_uuid = 2;
+}
+
+// ============================================================
+// ECONOMY
+// ============================================================
+
+message Currency {
+  string code = 1;
+  string display_name = 2;
+  uint32 minor_unit_scale = 3;
+  bool enabled = 4;
+}
+
+message WalletBalance {
+  string currency_code = 1;
+  int64 amount_minor = 2;
+  uint64 revision = 3;
+}
+
+enum EconomyTransactionType {
+  ECONOMY_TRANSACTION_TYPE_UNSPECIFIED = 0;
+
+  ADMIN_CREDIT = 1;
+  ADMIN_DEBIT = 2;
+  RESOURCE_CONVERSION = 3;
+  PURCHASE = 4;
+  SALE = 5;
+  PLAYER_TRANSFER = 6;
+  SYSTEM_REWARD = 7;
+  SYSTEM_PENALTY = 8;
+  ENERGY_SETTLEMENT = 9;
+  REFUND = 10;
+}
+
+enum EconomyTransactionStatus {
+  ECONOMY_TRANSACTION_STATUS_UNSPECIFIED = 0;
+  TRANSACTION_PENDING = 1;
+  TRANSACTION_COMMITTED = 2;
+  TRANSACTION_REJECTED = 3;
+  TRANSACTION_REVERSED = 4;
+}
+
+message EconomyTransaction {
+  string transaction_id = 1;
+  EconomyTransactionType type = 2;
+  EconomyTransactionStatus status = 3;
+
+  string currency_code = 4;
+  int64 amount_minor = 5;
+
+  optional string source_account_id = 6;
+  optional string destination_account_id = 7;
+
+  string initiating_server_id = 8;
+  string request_id = 9;
+
+  map<string, string> metadata = 10;
+
+  google.protobuf.Timestamp created_at = 11;
+  optional google.protobuf.Timestamp committed_at = 12;
+}
+
+message EconomyState {
+  repeated Currency currencies = 1;
+  EnergyMode energy_mode = 2;
+  uint64 pricing_revision = 3;
+  google.protobuf.Timestamp updated_at = 4;
+}
+
+message GetEconomyStateRequest {
+  RequestContext context = 1;
+}
+
+message TransferMoneyRequest {
+  RequestContext context = 1;
+
+  string source_player_uuid = 2;
+  string destination_player_uuid = 3;
+
+  string currency_code = 4;
+  int64 amount_minor = 5;
+}
+
+message TransactionResult {
+  oneof result {
+    EconomyTransaction transaction = 1;
+    Error error = 2;
+  }
+}
+
+// ============================================================
+// RESOURCE CONVERSION
+// ============================================================
+
+message ResourceRef {
+  string namespace = 1;
+  string path = 2;
+}
+
+message ResourceMutation {
+  ResourceRef resource = 1;
+  int64 amount_delta = 2;
+}
+
+enum ConversionDirection {
+  CONVERSION_DIRECTION_UNSPECIFIED = 0;
+  RESOURCE_TO_CURRENCY = 1;
+  CURRENCY_TO_RESOURCE = 2;
+}
+
+message ConversionQuote {
+  string quote_id = 1;
+
+  ResourceRef resource = 2;
+  int64 resource_amount = 3;
+
+  string currency_code = 4;
+  int64 unit_price_minor = 5;
+  int64 total_price_minor = 6;
+
+  uint64 pricing_revision = 7;
+
+  google.protobuf.Timestamp expires_at = 8;
+}
+
+message PrepareResourceConversionRequest {
+  RequestContext context = 1;
+
+  string player_uuid = 2;
+
+  ResourceRef resource = 3;
+  int64 resource_amount = 4;
+
+  ConversionDirection direction = 5;
+}
+
+message PrepareResourceConversionResponse {
+  oneof result {
+    ResourceConversionReservation reservation = 1;
+    Error error = 2;
+  }
+}
+
+message ResourceConversionReservation {
+  string reservation_id = 1;
+
+  string player_uuid = 2;
+
+  ConversionQuote quote = 3;
+
+  repeated ResourceMutation required_mutations = 4;
+
+  google.protobuf.Timestamp expires_at = 5;
+}
+
+message CommitResourceConversionRequest {
+  RequestContext context = 1;
+  string reservation_id = 2;
+}
+
+message AbortResourceConversionRequest {
+  RequestContext context = 1;
+  string reservation_id = 2;
+}
+
+message AbortResourceConversionResponse {
+  bool aborted = 1;
+  optional Error error = 2;
+}
+
+// ============================================================
+// ENERGY
+// ============================================================
+
+enum EnergyNodeType {
+  ENERGY_NODE_TYPE_UNSPECIFIED = 0;
+  ENERGY_PRODUCER = 1;
+  ENERGY_CONSUMER = 2;
+  ENERGY_STORAGE = 3;
+  ENERGY_HYBRID = 4;
+}
+
+enum EnergyMode {
+  ENERGY_MODE_UNSPECIFIED = 0;
+  ENERGY_NORMAL = 1;
+  ENERGY_SURPLUS = 2;
+  ENERGY_DEFICIT = 3;
+  ENERGY_CRITICAL = 4;
+  ENERGY_COLLAPSE = 5;
+}
+
+message EnergyNode {
+  string node_id = 1;
+
+  EnergyNodeType type = 2;
+
+  string server_id = 3;
+  string region_id = 4;
+  string display_name = 5;
+
+  bool enabled = 6;
+
+  int64 capacity_watts = 7;
+
+  int64 production_watts = 8;
+  int64 consumption_watts = 9;
+
+  int64 stored_wh = 10;
+  int64 max_stored_wh = 11;
+
+  double efficiency = 12;
+  double health = 13;
+
+  uint64 revision = 14;
+
+  google.protobuf.Timestamp last_reported_at = 15;
+}
+
+message EnergyNodeObservation {
+  string node_id = 1;
+
+  int64 observed_production_watts = 2;
+  int64 observed_consumption_watts = 3;
+  int64 observed_storage_wh = 4;
+
+  uint64 expected_revision = 5;
+
+  google.protobuf.Timestamp observed_at = 6;
+}
+
+message EnergyState {
+  int64 total_production_watts = 1;
+  int64 total_consumption_watts = 2;
+
+  int64 global_reserve_wh = 3;
+  int64 global_reserve_capacity_wh = 4;
+
+  int64 unmet_demand_watts = 5;
+
+  double efficiency = 6;
+
+  EnergyMode mode = 7;
+
+  uint64 simulation_tick = 8;
+  uint64 revision = 9;
+
+  repeated EnergyWarning warnings = 10;
+
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+message EnergyWarning {
+  string code = 1;
+  string message = 2;
+  EnergyWarningSeverity severity = 3;
+}
+
+enum EnergyWarningSeverity {
+  ENERGY_WARNING_SEVERITY_UNSPECIFIED = 0;
+  ENERGY_WARNING_INFO = 1;
+  ENERGY_WARNING_WARNING = 2;
+  ENERGY_WARNING_CRITICAL = 3;
+}
+
+message RegisterEnergyNodeRequest {
+  RequestContext context = 1;
+
+  EnergyNodeType type = 2;
+
+  string region_id = 3;
+  string display_name = 4;
+
+  int64 capacity_watts = 5;
+  int64 max_stored_wh = 6;
+}
+
+message ReportEnergyObservationRequest {
+  RequestContext context = 1;
+  EnergyNodeObservation observation = 2;
+}
+
+message ReportEnergyObservationResponse {
+  oneof result {
+    EnergyNode node = 1;
+    Error error = 2;
+  }
+}
+
+message GetEnergyStateRequest {
+  RequestContext context = 1;
+}
+
+// ============================================================
+// WORLD
+// ============================================================
+
+enum WorldMode {
+  WORLD_MODE_UNSPECIFIED = 0;
+  WORLD_STABLE = 1;
+  WORLD_DEGRADED = 2;
+  WORLD_EMERGENCY = 3;
+  WORLD_FAILURE = 4;
+}
+
+message WorldSnapshot {
+  string world_id = 1;
+
+  WorldMode mode = 2;
+
+  EnergyState energy = 3;
+  EconomyState economy = 4;
+
+  repeated WorldEvent active_events = 5;
+
+  uint64 simulation_tick = 6;
+  uint64 revision = 7;
+
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message WorldEvent {
+  string event_id = 1;
+  string event_type = 2;
+
+  map<string, string> metadata = 3;
+
+  google.protobuf.Timestamp started_at = 4;
+  optional google.protobuf.Timestamp ends_at = 5;
+}
+
+message GetWorldSnapshotRequest {
+  RequestContext context = 1;
+}
+
+// ============================================================
+// TRANSITIONS
+// ============================================================
+
+enum TransitionStatus {
+  TRANSITION_STATUS_UNSPECIFIED = 0;
+  TRANSITION_PREPARING = 1;
+  TRANSITION_READY = 2;
+  TRANSITION_CLAIMED = 3;
+  TRANSITION_COMMITTED = 4;
+  TRANSITION_ABORTED = 5;
+  TRANSITION_EXPIRED = 6;
+}
+
+message PlayerTransition {
+  string transition_id = 1;
+
+  string player_uuid = 2;
+
+  string source_server_id = 3;
+  string target_server_id = 4;
+
+  TransitionStatus status = 5;
+
+  string ticket = 6;
+
+  string payload_format = 7;
+  uint32 payload_version = 8;
+  bytes opaque_payload = 9;
+
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp expires_at = 11;
+}
+
+message BeginTransitionRequest {
+  RequestContext context = 1;
+
+  string player_uuid = 2;
+  string target_server_id = 3;
+
+  string payload_format = 4;
+  uint32 payload_version = 5;
+  bytes opaque_payload = 6;
+}
+
+message BeginTransitionResponse {
+  oneof result {
+    PlayerTransition transition = 1;
+    Error error = 2;
+  }
+}
+
+message ClaimTransitionRequest {
+  RequestContext context = 1;
+  string ticket = 2;
+}
+
+message ClaimTransitionResponse {
+  oneof result {
+    PlayerTransition transition = 1;
+    Error error = 2;
+  }
+}
+
+message CommitTransitionRequest {
+  RequestContext context = 1;
+  string transition_id = 2;
+}
+
+message CommitTransitionResponse {
+  oneof result {
+    PlayerTransition transition = 1;
+    Error error = 2;
+  }
+}
+
+message AbortTransitionRequest {
+  RequestContext context = 1;
+  string transition_id = 2;
+  string reason = 3;
+}
+
+message AbortTransitionResponse {
+  oneof result {
+    PlayerTransition transition = 1;
+    Error error = 2;
+  }
+}

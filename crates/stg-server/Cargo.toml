@@ -1,0 +1,22 @@
+[package]
+name = "stg-server"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "stg-core"
+path = "src/main.rs"
+
+[dependencies]
+stg-domain = { path = "../stg-domain" }
+stg-application = { path = "../stg-application" }
+stg-infrastructure = { path = "../stg-infrastructure" }
+stg-proto = { path = "../stg-proto" }
+tonic = { version = "0.11.0", features = ["tls"] }
+tokio = { version = "1.38.0", features = ["full"] }
+uuid = { version = "1.8.0", features = ["v4"] }
+chrono = { version = "0.4.38" }
+sqlx = { version = "0.7.4", features = ["runtime-tokio", "postgres"] }
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["json"] }
+dotenv = "0.15.0"

@@ -1,0 +1,44 @@
+# STG-Ashland Core Backend
+
+Authoritative backend for Minecraft 1.21.1 NeoForge project.
+
+## Requirements
+- Rust (latest stable)
+- PostgreSQL
+- `protoc` (Protocol Buffers compiler)
+
+## System Dependencies
+To build the project, you must have `protoc` installed.
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get install protobuf-compiler
+```
+
+**Fedora:**
+```bash
+sudo dnf install protobuf-compiler
+```
+
+## Build
+```bash
+cargo check --workspace
+cargo build --workspace
+```
+
+## Testing
+```bash
+cargo test --workspace
+```
+```
+
+### Итог по задаче:
+1.  **Рабочее пространство (`Cargo.toml`)**: Исправлено, все крейты (включая `stg-server`) теперь в одной рабочей группе.
+2.  **Git**: Инициализирован, лишние файлы исключены через `.gitignore`.
+3.  **Документация**: Подготовлена инструкция для сторонних аудиторов.
+
+**Теперь ваш проект готов к заливке на GitHub.** Вы можете закоммитить `README.md` самостоятельно:
+```bash
+cd stg-backend
+git add README.md
+git commit -m "docs: add build instructions"
