@@ -6,3 +6,7 @@ target/
 **/target
 .env
 .continue/
+
+home/
+a.out
+*.log

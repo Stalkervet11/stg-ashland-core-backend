@@ -1,3 +1,0 @@
-#!/bin/bash
-# Proper cc wrapper for linking: uses system ld with proper search paths
-exec /usr/bin/ld "$@"
