@@ -1,0 +1,28 @@
+#!/bin/bash
+# Fixed wrapper that handles gcc-style -m64 flag for ld
+ARGS=()
+for arg in "$@"; do
+  case "$arg" in
+    -m64)        ARGS+=("-m" "elf_x86_64") ;;
+    -m32)        ARGS+=("-m" "elf_i386") ;;
+    -fuse-ld=*)  ;;
+    -Wl,*)       IFS=',' read -ra X <<< "${arg#-Wl,}"; for x in "${X[@]}"; do ARGS+=("$x"); done ;;
+    -B*/gcc-ld)  ;;
+    -z)          ARGS+=("$arg") ;;
+    -nodefaultlibs) ARGS+=("$arg") ;;
+    -Bstatic)    ARGS+=("$arg") ;;
+    -Bdynamic)   ARGS+=("$arg") ;;
+    --as-needed|--no-as-needed) ARGS+=("$arg") ;;
+    --gc-sections|--eh-frame-hdr) ARGS+=("$arg") ;;
+    -pie|-shared|-static) ARGS+=("$arg") ;;
+    *.o|*.rlib|*.a|*.so) ARGS+=("$arg") ;;
+    -lgcc_s|-lutil|-lrt|-lpthread|-lm|-ldl|-lc) ARGS+=("$arg") ;;
+    -o)          ARGS+=("$arg") ;;
+    -L)          ARGS+=("$arg") ;;
+    -l)          ARGS+=("$arg") ;;
+    -L/*|-L~*)   ARGS+=("$arg") ;;
+    -l:*|-l*)    ARGS+=("$arg") ;;
+    *)           ARGS+=("$arg") ;;
+  esac
+done
+exec /usr/bin/ld "${ARGS[@]}"

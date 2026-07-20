@@ -1,0 +1,29 @@
+#!/bin/bash
+# Minimal cc stub that calls ld with cc-compatible flags
+ARGS=()
+SKIP=false
+for arg in "$@"; do
+    $SKIP && { SKIP=false; continue; }
+    case "$arg" in
+        -m64) ;;
+        -o) SKIP=true; ARGS+=("$arg") ;;
+        -Wl,*) ARGS+=("${arg#-Wl,}") ;;
+        -L) SKIP=true; ARGS+=("$arg") ;;
+        -L*) ARGS+=("$arg") ;;
+        -l*) ARGS+=("$arg") ;;
+        -B*) ARGS+=("$arg") ;;
+        -shared) ARGS+=("-shared") ;;
+        -pie) ARGS+=("-pie") ;;
+        -z) SKIP=true; ARGS+=("$arg") ;;
+        -nodefaultlibs) ;;
+        -fuse-ld=*) ;;
+        --eh-frame-hdr) ARGS+=("--eh-frame-hdr") ;;
+        --gc-sections) ARGS+=("--gc-sections") ;;
+        -lc|-lm|-lrt|-lpthread|-ldl|-lutil) ARGS+=("$arg") ;;
+        *.o|*.rlib|*.so|*.a) ARGS+=("$arg") ;;
+        -lgcc_s) ;;
+        -no-pie) ARGS+=("-nopie") ;;
+        *) ARGS+=("$arg") ;;
+    esac
+done
+exec /usr/bin/ld "${ARGS[@]}"

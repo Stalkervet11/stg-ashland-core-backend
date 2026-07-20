@@ -1,0 +1,14 @@
+crates/stg-infrastructure/src/lib.rs:1615:CREATE TABLE IF NOT EXISTS players (
+crates/stg-infrastructure/src/lib.rs:1624:CREATE TABLE IF NOT EXISTS wallets (
+crates/stg-infrastructure/src/lib.rs:1634:CREATE TABLE IF NOT EXISTS economy_transactions (
+crates/stg-infrastructure/src/lib.rs:1645:CREATE TABLE IF NOT EXISTS economy_transaction_entries (
+crates/stg-infrastructure/src/lib.rs:1653:CREATE TABLE IF NOT EXISTS energy_nodes (
+crates/stg-infrastructure/src/lib.rs:1672:CREATE TABLE IF NOT EXISTS processed_requests (
+crates/stg-infrastructure/src/lib.rs:1680:CREATE TABLE IF NOT EXISTS domain_events (
+crates/stg-infrastructure/src/lib.rs:1690:CREATE TABLE IF NOT EXISTS outbox_events (
+crates/stg-infrastructure/src/lib.rs:1702:CREATE TABLE IF NOT EXISTS conversion_rules (
+crates/stg-infrastructure/src/lib.rs:1715:CREATE TABLE IF NOT EXISTS resource_conversion_reservations (
+crates/stg-infrastructure/src/lib.rs:1731:CREATE INDEX IF NOT EXISTS idx_wallets_player ON wallets(player_id);
+crates/stg-infrastructure/src/lib.rs:1732:CREATE INDEX IF NOT EXISTS idx_entries_tx ON economy_transaction_entries(transaction_id);
+crates/stg-infrastructure/src/lib.rs:1733:CREATE INDEX IF NOT EXISTS idx_events_aggregate ON domain_events(aggregate_type, aggregate_id);
+crates/stg-infrastructure/src/lib.rs:1734:CREATE INDEX IF NOT EXISTS idx_outbox_status_available ON outbox_events(status, available_at);

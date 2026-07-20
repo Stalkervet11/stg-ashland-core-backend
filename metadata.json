@@ -1,0 +1,8 @@
+{
+  "name": "STG-Ashland Core Backend",
+  "description": "An interactive architectural panel, domain-driven simulation engine, and Rust Cargo workspace explorer for the STG-Ashland Minecraft server backend core.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

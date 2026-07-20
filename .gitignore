@@ -1,4 +1,8 @@
-/target
+target/
 .env
 .vscode/
-*.log
+
+target/
+**/target
+.env
+.continue/

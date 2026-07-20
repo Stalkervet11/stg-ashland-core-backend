@@ -1,0 +1,10 @@
+[workspace]
+members = [
+    "crates/stg-api",
+    "crates/stg-application",
+    "crates/stg-domain",
+    "crates/stg-infrastructure",
+    "crates/stg-proto",
+    "crates/stg-server",
+]
+resolver = "2"

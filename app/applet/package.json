@@ -1,0 +1,9 @@
+{
+  "name": "stg-backend",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "cd stg-backend && ~/.cargo/bin/cargo run --bin stg-backend",
+    "build": "cd stg-backend && ~/.cargo/bin/cargo build --release",
+    "start": "cd stg-backend && ~/.cargo/bin/cargo run --release --bin stg-backend"
+  }
+}

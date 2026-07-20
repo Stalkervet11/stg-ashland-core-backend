@@ -1,0 +1,26 @@
+--- Phase 11: Server Bootstrap ---
+265:async fn main() -> Result<(), Box<dyn std::error::Error>> {
+30:    player_service: Arc<PlayerService>,
+31:    economy_service: Arc<EconomyService>,
+57:        match self.player_service.register_player(player_uuid, req.username, correlation_id).await {
+139:        match self.economy_service.transfer_money(
+287:    let pool = PgPoolOptions::new()
+297:        .execute(&pool)
+301:    // 5. Instantiate Domain/Application services
+302:    let player_repo = Box::new(PostgresPlayerRepository::new(pool.clone()));
+303:    let wallet_repo = Box::new(PostgresWalletRepository::new(pool.clone()));
+304:    let tx_repo = Box::new(PostgresTransactionRepository::new(pool.clone()));
+308:    let event_repo = Arc::new(stg-infrastructure::PostgresEventLogRepository::new(pool.clone()));
+311:    let player_service = Arc::new(PlayerService::new(
+318:    let economy_service = Arc::new(EconomyService::new(
+326:    let energy_repo = Arc::new(stg-infrastructure::PostgresEnergyRepository::new(pool.clone()));
+327:    let energy_service = Arc::new(EnergySimulationService::new(
+334:    let simulation_service = energy_service.clone();
+341:            if let Err(e) = simulation_service.execute_tick(tick_correlation_id).await {
+349:        player_service,
+350:        economy_service,
+353:    info!("Starting high-load Tonic gRPC service at {}...", bind_addr);
+355:        .add_service(StgBackendServer::new(backend_server))
+--- Phase 12: Test Reality ---
+crates/stg-domain/src/lib.rs:426:    #[test]
+crates/stg-domain/src/lib.rs:457:    #[test]

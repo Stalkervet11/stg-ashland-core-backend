@@ -1,0 +1,2755 @@
+--- Phase 2: Build Reality Check ---
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/auth.rs:1:
+[31m-use tonic::{Request, Status};
+(B[m use std::collections::HashMap;
+ use std::sync::Arc;
+[32m+use tonic::{Request, Status};
+(B[m 
+[31m-pub fn auth_interceptor(mut request: Request<()>, server_tokens: Arc<HashMap<String, String>>) -> Result<Request<()>, Status> {
+(B[m[32m+pub fn auth_interceptor(
+(B[m[32m+    mut request: Request<()>,
+(B[m[32m+    server_tokens: Arc<HashMap<String, String>>,
+(B[m[32m+) -> Result<Request<()>, Status> {
+(B[m     let (token, server_id) = {
+         let metadata = request.metadata();
+         let token = match metadata.get("authorization") {
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/auth.rs:9:
+[31m-            Some(t) => t.to_str().map_err(|_| Status::unauthenticated("Invalid token format"))?.to_string(),
+(B[m[32m+            Some(t) => t
+(B[m[32m+                .to_str()
+(B[m[32m+                .map_err(|_| Status::unauthenticated("Invalid token format"))?
+(B[m[32m+                .to_string(),
+(B[m             None => return Err(Status::unauthenticated("Missing authorization metadata")),
+         };
+[31m-        
+(B[m[32m+
+(B[m         let server_id = match metadata.get("x-server-id") {
+[31m-            Some(s) => s.to_str().map_err(|_| Status::unauthenticated("Invalid server id format"))?.to_string(),
+(B[m[32m+            Some(s) => s
+(B[m[32m+                .to_str()
+(B[m[32m+                .map_err(|_| Status::unauthenticated("Invalid server id format"))?
+(B[m[32m+                .to_string(),
+(B[m             None => return Err(Status::unauthenticated("Missing x-server-id metadata")),
+         };
+         (token, server_id)
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/auth.rs:20:
+     if let Some(expected_token) = server_tokens.get(&server_id) {
+         let token = token.strip_prefix("Bearer ").unwrap_or(&token);
+         if token == expected_token {
+[31m-            request.extensions_mut().insert(AuthenticatedServer(server_id.to_string()));
+(B[m[32m+            request
+(B[m[32m+                .extensions_mut()
+(B[m[32m+                .insert(AuthenticatedServer(server_id.to_string()));
+(B[m             return Ok(request);
+         }
+     }
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/error.rs:15:
+         DomainError::ConversionReservationExpired(_) => ErrorCode::ReservationExpired,
+         DomainError::ConversionRuleNotFound => ErrorCode::ConversionRuleNotFound,
+         DomainError::ServerIdentityMismatch { .. } => ErrorCode::ServerUnauthorized,
+[31m-        DomainError::InternalStateError(_) |
+(B[m[31m-        DomainError::LedgerImbalance |
+(B[m[31m-        DomainError::ArithmeticOverflow => ErrorCode::InternalError,
+(B[m[32m+        DomainError::InternalStateError(_)
+(B[m[32m+        | DomainError::LedgerImbalance
+(B[m[32m+        | DomainError::ArithmeticOverflow => ErrorCode::InternalError,
+(B[m     };
+ 
+     let _proto_err = ProtoError {
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:1:
+[32m+use crate::grpc::auth::AuthenticatedServer;
+(B[m[32m+use crate::grpc::error::map_domain_error;
+(B[m[32m+use std::sync::Arc;
+(B[m[32m+use stg_application::{ConversionService, EconomyService, EnergyService, PlayerService};
+(B[m[32m+use stg_domain::{ConversionDirection, PlayerId};
+(B[m use stg_proto::stg::v1::{
+[31m-    stg_backend_server::StgBackend,
+(B[m[31m-    BeginTransitionRequest, BeginTransitionResponse, ClaimTransitionRequest,
+(B[m[31m-    ClaimTransitionResponse, CommitResourceConversionRequest, CommitTransitionRequest,
+(B[m[31m-    CommitTransitionResponse, AbortTransitionRequest, AbortTransitionResponse,
+(B[m[31m-    EnergyNode, EnergyState, EconomyState, PlayerSnapshot,
+(B[m[31m-    PrepareResourceConversionRequest, PrepareResourceConversionResponse,
+(B[m[31m-    RegisterEnergyNodeRequest, RegisterPlayerRequest, RegisterPlayerResponse,
+(B[m[31m-    ReportEnergyObservationRequest, ReportEnergyObservationResponse,
+(B[m[31m-    TransactionResult, TransferMoneyRequest, WorldSnapshot,
+(B[m[31m-    GetEnergyStateRequest, GetEconomyStateRequest, GetPlayerSnapshotRequest, GetWorldSnapshotRequest,
+(B[m[31m-    AbortResourceConversionRequest, AbortResourceConversionResponse,
+(B[m[31m-    prepare_resource_conversion_response, transaction_result, BackendMessage, ServerMessage, Error as ProtoError, ErrorCode,
+(B[m[32m+    prepare_resource_conversion_response, stg_backend_server::StgBackend, transaction_result,
+(B[m[32m+    AbortResourceConversionRequest, AbortResourceConversionResponse, AbortTransitionRequest,
+(B[m[32m+    AbortTransitionResponse, BackendMessage, BeginTransitionRequest, BeginTransitionResponse,
+(B[m[32m+    ClaimTransitionRequest, ClaimTransitionResponse, CommitResourceConversionRequest,
+(B[m[32m+    CommitTransitionRequest, CommitTransitionResponse, EconomyState, EnergyNode, EnergyState,
+(B[m[32m+    Error as ProtoError, ErrorCode, GetEconomyStateRequest, GetEnergyStateRequest,
+(B[m[32m+    GetPlayerSnapshotRequest, GetWorldSnapshotRequest, PlayerSnapshot,
+(B[m[32m+    PrepareResourceConversionRequest, PrepareResourceConversionResponse, RegisterEnergyNodeRequest,
+(B[m[32m+    RegisterPlayerRequest, RegisterPlayerResponse, ReportEnergyObservationRequest,
+(B[m[32m+    ReportEnergyObservationResponse, ServerMessage, TransactionResult, TransferMoneyRequest,
+(B[m[32m+    WorldSnapshot,
+(B[m };
+ use tonic::{Request, Response, Status, Streaming};
+[31m-use stg_application::{EconomyService, ConversionService, PlayerService, EnergyService};
+(B[m[31m-use stg_domain::{PlayerId, ConversionDirection};
+(B[m use uuid::Uuid;
+[31m-use std::sync::Arc;
+(B[m[31m-use crate::grpc::auth::AuthenticatedServer;
+(B[m[31m-use crate::grpc::error::map_domain_error;
+(B[m 
+ pub struct StgGrpcServer {
+     pub player_service: Arc<PlayerService>,
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:40:
+ 
+ #[tonic::async_trait]
+ impl StgBackend for StgGrpcServer {
+[31m-    type ConnectStream = std::pin::Pin<Box<dyn tokio_stream::Stream<Item = Result<BackendMessage, Status>> + Send + 'static>>;
+(B[m[32m+    type ConnectStream = std::pin::Pin<
+(B[m[32m+        Box<dyn tokio_stream::Stream<Item = Result<BackendMessage, Status>> + Send + 'static>,
+(B[m[32m+    >;
+(B[m 
+     async fn connect(
+         &self,
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:47:
+         _request: Request<Streaming<ServerMessage>>,
+     ) -> Result<Response<Self::ConnectStream>, Status> {
+[31m-        Err(Status::unimplemented("Connect realtime streaming not implemented"))
+(B[m[32m+        Err(Status::unimplemented(
+(B[m[32m+            "Connect realtime streaming not implemented",
+(B[m[32m+        ))
+(B[m     }
+ 
+     async fn register_player(
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:56:
+         let _server_id = extract_server_id(&request)?;
+ 
+         let req = request.into_inner();
+[31m-        let _ctx = req.context.ok_or_else(|| Status::invalid_argument("Missing context"))?;
+(B[m[31m-        
+(B[m[32m+        let _ctx = req
+(B[m[32m+            .context
+(B[m[32m+            .ok_or_else(|| Status::invalid_argument("Missing context"))?;
+(B[m[32m+
+(B[m         let player_uuid = parse_uuid(&req.player_uuid)?;
+         let correlation_id = parse_uuid(&_ctx.correlation_id)?;
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:64:
+[31m-        let player = self.player_service.register_player(player_uuid, req.username, correlation_id)
+(B[m[32m+        let player = self
+(B[m[32m+            .player_service
+(B[m[32m+            .register_player(player_uuid, req.username, correlation_id)
+(B[m             .await
+             .map_err(map_domain_error)?;
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:68:
+         Ok(Response::new(RegisterPlayerResponse {
+[31m-            result: Some(stg_proto::stg::v1::register_player_response::Result::Player(stg_proto::stg::v1::PlayerSnapshot {
+(B[m[31m-                identity: Some(stg_proto::stg::v1::PlayerIdentity {
+(B[m[31m-                    uuid: player.id.0.to_string(),
+(B[m[31m-                    username: player.username,
+(B[m[31m-                    status: stg_proto::stg::v1::PlayerStatus::Active.into(), // simplified
+(B[m[31m-                    created_at: Some(prost_types::Timestamp { seconds: player.created_at.timestamp(), nanos: player.created_at.timestamp_subsec_nanos() as i32 }),
+(B[m[31m-                    last_seen_at: Some(prost_types::Timestamp { seconds: player.last_seen_at.timestamp(), nanos: player.last_seen_at.timestamp_subsec_nanos() as i32 }),
+(B[m[31m-                }),
+(B[m[31m-                wallets: vec![],
+(B[m[31m-                global_reputation: 0,
+(B[m[31m-                faction_reputation: std::collections::HashMap::new(),
+(B[m[31m-                integer_stats: std::collections::HashMap::new(),
+(B[m[31m-                string_stats: std::collections::HashMap::new(),
+(B[m[31m-                current_server_id: Some("".to_string()),
+(B[m[31m-                revision: 0,
+(B[m[31m-                transition: None,
+(B[m[31m-            })),
+(B[m[32m+            result: Some(
+(B[m[32m+                stg_proto::stg::v1::register_player_response::Result::Player(
+(B[m[32m+                    stg_proto::stg::v1::PlayerSnapshot {
+(B[m[32m+                        identity: Some(stg_proto::stg::v1::PlayerIdentity {
+(B[m[32m+                            uuid: player.id.0.to_string(),
+(B[m[32m+                            username: player.username,
+(B[m[32m+                            status: stg_proto::stg::v1::PlayerStatus::Active.into(), // simplified
+(B[m[32m+                            created_at: Some(prost_types::Timestamp {
+(B[m[32m+                                seconds: player.created_at.timestamp(),
+(B[m[32m+                                nanos: player.created_at.timestamp_subsec_nanos() as i32,
+(B[m[32m+                            }),
+(B[m[32m+                            last_seen_at: Some(prost_types::Timestamp {
+(B[m[32m+                                seconds: player.last_seen_at.timestamp(),
+(B[m[32m+                                nanos: player.last_seen_at.timestamp_subsec_nanos() as i32,
+(B[m[32m+                            }),
+(B[m[32m+                        }),
+(B[m[32m+                        wallets: vec![],
+(B[m[32m+                        global_reputation: 0,
+(B[m[32m+                        faction_reputation: std::collections::HashMap::new(),
+(B[m[32m+                        integer_stats: std::collections::HashMap::new(),
+(B[m[32m+                        string_stats: std::collections::HashMap::new(),
+(B[m[32m+                        current_server_id: Some("".to_string()),
+(B[m[32m+                        revision: 0,
+(B[m[32m+                        transition: None,
+(B[m[32m+                    },
+(B[m[32m+                ),
+(B[m[32m+            ),
+(B[m         }))
+     }
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:93:
+         let req = request.into_inner();
+         let player_uuid = parse_uuid(&req.player_uuid)?;
+ 
+[31m-        let (player, wallets) = self.player_service.get_player_snapshot(player_uuid).await.map_err(map_domain_error)?;
+(B[m[32m+        let (player, wallets) = self
+(B[m[32m+            .player_service
+(B[m[32m+            .get_player_snapshot(player_uuid)
+(B[m[32m+            .await
+(B[m[32m+            .map_err(map_domain_error)?;
+(B[m 
+         let proto_identity = stg_proto::stg::v1::PlayerIdentity {
+             uuid: player.id.0.to_string(),
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:100:
+             username: player.username,
+             status: stg_proto::stg::v1::PlayerStatus::Active.into(), // simplified
+[31m-            created_at: Some(prost_types::Timestamp { seconds: player.created_at.timestamp(), nanos: player.created_at.timestamp_subsec_nanos() as i32 }),
+(B[m[31m-            last_seen_at: Some(prost_types::Timestamp { seconds: player.last_seen_at.timestamp(), nanos: player.last_seen_at.timestamp_subsec_nanos() as i32 }),
+(B[m[32m+            created_at: Some(prost_types::Timestamp {
+(B[m[32m+                seconds: player.created_at.timestamp(),
+(B[m[32m+                nanos: player.created_at.timestamp_subsec_nanos() as i32,
+(B[m[32m+            }),
+(B[m[32m+            last_seen_at: Some(prost_types::Timestamp {
+(B[m[32m+                seconds: player.last_seen_at.timestamp(),
+(B[m[32m+                nanos: player.last_seen_at.timestamp_subsec_nanos() as i32,
+(B[m[32m+            }),
+(B[m         };
+ 
+[31m-        let proto_wallets = wallets.into_iter().map(|w| stg_proto::stg::v1::WalletBalance {
+(B[m[31m-            currency_code: w.currency_code,
+(B[m[31m-            amount_minor: w.balance.0,
+(B[m[31m-            revision: w.revision,
+(B[m[31m-        }).collect();
+(B[m[32m+        let proto_wallets = wallets
+(B[m[32m+            .into_iter()
+(B[m[32m+            .map(|w| stg_proto::stg::v1::WalletBalance {
+(B[m[32m+                currency_code: w.currency_code,
+(B[m[32m+                amount_minor: w.balance.0,
+(B[m[32m+                revision: w.revision,
+(B[m[32m+            })
+(B[m[32m+            .collect();
+(B[m 
+         Ok(Response::new(PlayerSnapshot {
+             identity: Some(proto_identity),
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:129:
+         let server_id = extract_server_id(&request)?;
+ 
+         let req = request.into_inner();
+[31m-        let ctx = req.context.ok_or_else(|| Status::invalid_argument("Missing context"))?;
+(B[m[32m+        let ctx = req
+(B[m[32m+            .context
+(B[m[32m+            .ok_or_else(|| Status::invalid_argument("Missing context"))?;
+(B[m 
+         // verify context server_id matches authenticated server
+         if ctx.server_id != server_id {
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:141:
+         let idempotency_key = parse_uuid(&ctx.request_id)?;
+         let correlation_id = parse_uuid(&ctx.correlation_id)?;
+ 
+[31m-        let tx = self.economy_service.transfer_money(
+(B[m[31m-            PlayerId(from_player),
+(B[m[31m-            PlayerId(to_player),
+(B[m[31m-            &req.currency_code,
+(B[m[31m-            req.amount_minor,
+(B[m[31m-            idempotency_key,
+(B[m[31m-            server_id.clone(),
+(B[m[31m-            correlation_id,
+(B[m[31m-        ).await.map_err(map_domain_error)?;
+(B[m[32m+        let tx = self
+(B[m[32m+            .economy_service
+(B[m[32m+            .transfer_money(
+(B[m[32m+                PlayerId(from_player),
+(B[m[32m+                PlayerId(to_player),
+(B[m[32m+                &req.currency_code,
+(B[m[32m+                req.amount_minor,
+(B[m[32m+                idempotency_key,
+(B[m[32m+                server_id.clone(),
+(B[m[32m+                correlation_id,
+(B[m[32m+            )
+(B[m[32m+            .await
+(B[m[32m+            .map_err(map_domain_error)?;
+(B[m 
+         let (created_at, committed_at) = (
+[31m-            Some(prost_types::Timestamp { seconds: tx.created_at.timestamp(), nanos: tx.created_at.timestamp_subsec_nanos() as i32 }),
+(B[m[31m-            tx.committed_at.map(|t| prost_types::Timestamp { seconds: t.timestamp(), nanos: t.timestamp_subsec_nanos() as i32 }),
+(B[m[32m+            Some(prost_types::Timestamp {
+(B[m[32m+                seconds: tx.created_at.timestamp(),
+(B[m[32m+                nanos: tx.created_at.timestamp_subsec_nanos() as i32,
+(B[m[32m+            }),
+(B[m[32m+            tx.committed_at.map(|t| prost_types::Timestamp {
+(B[m[32m+                seconds: t.timestamp(),
+(B[m[32m+                nanos: t.timestamp_subsec_nanos() as i32,
+(B[m[32m+            }),
+(B[m         );
+ 
+         Ok(Response::new(TransactionResult {
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:160:
+[31m-            result: Some(transaction_result::Result::Transaction(stg_proto::stg::v1::EconomyTransaction {
+(B[m[31m-                transaction_id: tx.id.0.to_string(),
+(B[m[31m-                r#type: stg_proto::stg::v1::EconomyTransactionType::PlayerTransfer.into(),
+(B[m[31m-                status: stg_proto::stg::v1::EconomyTransactionStatus::TransactionCommitted.into(),
+(B[m[31m-                currency_code: req.currency_code,
+(B[m[31m-                amount_minor: req.amount_minor,
+(B[m[31m-                source_account_id: Some(req.source_player_uuid),
+(B[m[31m-                destination_account_id: Some(req.destination_player_uuid),
+(B[m[31m-                initiating_server_id: server_id,
+(B[m[31m-                request_id: ctx.request_id,
+(B[m[31m-                metadata: std::collections::HashMap::new(),
+(B[m[31m-                created_at,
+(B[m[31m-                committed_at,
+(B[m[31m-            }))
+(B[m[32m+            result: Some(transaction_result::Result::Transaction(
+(B[m[32m+                stg_proto::stg::v1::EconomyTransaction {
+(B[m[32m+                    transaction_id: tx.id.0.to_string(),
+(B[m[32m+                    r#type: stg_proto::stg::v1::EconomyTransactionType::PlayerTransfer.into(),
+(B[m[32m+                    status: stg_proto::stg::v1::EconomyTransactionStatus::TransactionCommitted
+(B[m[32m+                        .into(),
+(B[m[32m+                    currency_code: req.currency_code,
+(B[m[32m+                    amount_minor: req.amount_minor,
+(B[m[32m+                    source_account_id: Some(req.source_player_uuid),
+(B[m[32m+                    destination_account_id: Some(req.destination_player_uuid),
+(B[m[32m+                    initiating_server_id: server_id,
+(B[m[32m+                    request_id: ctx.request_id,
+(B[m[32m+                    metadata: std::collections::HashMap::new(),
+(B[m[32m+                    created_at,
+(B[m[32m+                    committed_at,
+(B[m[32m+                },
+(B[m[32m+            )),
+(B[m         }))
+     }
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:181:
+         let server_id = extract_server_id(&request)?;
+ 
+         let req = request.into_inner();
+[31m-        let ctx = req.context.as_ref().ok_or_else(|| Status::invalid_argument("Missing context"))?;
+(B[m[32m+        let ctx = req
+(B[m[32m+            .context
+(B[m[32m+            .as_ref()
+(B[m[32m+            .ok_or_else(|| Status::invalid_argument("Missing context"))?;
+(B[m 
+         if ctx.server_id != server_id {
+             return Err(Status::permission_denied("Server ID mismatch"));
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:190:
+         let player_id = parse_uuid(&req.player_uuid)?;
+         let idempotency_key = parse_uuid(&ctx.request_id)?;
+         let correlation_id = parse_uuid(&ctx.correlation_id)?;
+[31m-        let resource = req.resource.ok_or_else(|| Status::invalid_argument("Missing resource"))?;
+(B[m[32m+        let resource = req
+(B[m[32m+            .resource
+(B[m[32m+            .ok_or_else(|| Status::invalid_argument("Missing resource"))?;
+(B[m 
+         let direction = match stg_proto::stg::v1::ConversionDirection::try_from(req.direction) {
+[31m-            Ok(stg_proto::stg::v1::ConversionDirection::ResourceToCurrency) => ConversionDirection::ResourceToCurrency,
+(B[m[31m-            Ok(stg_proto::stg::v1::ConversionDirection::CurrencyToResource) => ConversionDirection::CurrencyToResource,
+(B[m[32m+            Ok(stg_proto::stg::v1::ConversionDirection::ResourceToCurrency) => {
+(B[m[32m+                ConversionDirection::ResourceToCurrency
+(B[m[32m+            }
+(B[m[32m+            Ok(stg_proto::stg::v1::ConversionDirection::CurrencyToResource) => {
+(B[m[32m+                ConversionDirection::CurrencyToResource
+(B[m[32m+            }
+(B[m             _ => return Err(Status::invalid_argument("Invalid direction")),
+         };
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:201:
+[31m-        match self.conversion_service.prepare_conversion(
+(B[m[31m-            PlayerId(player_id),
+(B[m[31m-            &resource.namespace,
+(B[m[31m-            &resource.path,
+(B[m[31m-            req.resource_amount,
+(B[m[31m-            direction,
+(B[m[31m-            idempotency_key,
+(B[m[31m-            &server_id,
+(B[m[31m-            correlation_id,
+(B[m[31m-        ).await {
+(B[m[32m+        match self
+(B[m[32m+            .conversion_service
+(B[m[32m+            .prepare_conversion(
+(B[m[32m+                PlayerId(player_id),
+(B[m[32m+                &resource.namespace,
+(B[m[32m+                &resource.path,
+(B[m[32m+                req.resource_amount,
+(B[m[32m+                direction,
+(B[m[32m+                idempotency_key,
+(B[m[32m+                &server_id,
+(B[m[32m+                correlation_id,
+(B[m[32m+            )
+(B[m[32m+            .await
+(B[m[32m+        {
+(B[m             Ok(res) => {
+                 let quote = res.quote;
+                 let reservation = stg_proto::stg::v1::ResourceConversionReservation {
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:215:
+                     player_uuid: req.player_uuid,
+                     quote: Some(stg_proto::stg::v1::ConversionQuote {
+                         quote_id: quote.quote_id,
+[31m-                        resource: Some(stg_proto::stg::v1::ResourceRef { namespace: quote.resource.namespace, path: quote.resource.path }),
+(B[m[32m+                        resource: Some(stg_proto::stg::v1::ResourceRef {
+(B[m[32m+                            namespace: quote.resource.namespace,
+(B[m[32m+                            path: quote.resource.path,
+(B[m[32m+                        }),
+(B[m                         resource_amount: quote.resource_amount,
+                         currency_code: quote.currency_code,
+                         unit_price_minor: quote.unit_price_minor,
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:222:
+                         total_price_minor: quote.total_price_minor,
+                         pricing_revision: quote.pricing_revision,
+[31m-                        expires_at: Some(prost_types::Timestamp { seconds: quote.expires_at.timestamp(), nanos: quote.expires_at.timestamp_subsec_nanos() as i32 }),
+(B[m[32m+                        expires_at: Some(prost_types::Timestamp {
+(B[m[32m+                            seconds: quote.expires_at.timestamp(),
+(B[m[32m+                            nanos: quote.expires_at.timestamp_subsec_nanos() as i32,
+(B[m[32m+                        }),
+(B[m                     }),
+[31m-                    required_mutations: res.required_mutations.into_iter().map(|m| stg_proto::stg::v1::ResourceMutation {
+(B[m[31m-                        resource: Some(stg_proto::stg::v1::ResourceRef { namespace: m.resource.namespace, path: m.resource.path }),
+(B[m[31m-                        amount_delta: m.amount_delta,
+(B[m[31m-                    }).collect(),
+(B[m[31m-                    expires_at: Some(prost_types::Timestamp { seconds: res.expires_at.timestamp(), nanos: res.expires_at.timestamp_subsec_nanos() as i32 }),
+(B[m[32m+                    required_mutations: res
+(B[m[32m+                        .required_mutations
+(B[m[32m+                        .into_iter()
+(B[m[32m+                        .map(|m| stg_proto::stg::v1::ResourceMutation {
+(B[m[32m+                            resource: Some(stg_proto::stg::v1::ResourceRef {
+(B[m[32m+                                namespace: m.resource.namespace,
+(B[m[32m+                                path: m.resource.path,
+(B[m[32m+                            }),
+(B[m[32m+                            amount_delta: m.amount_delta,
+(B[m[32m+                        })
+(B[m[32m+                        .collect(),
+(B[m[32m+                    expires_at: Some(prost_types::Timestamp {
+(B[m[32m+                        seconds: res.expires_at.timestamp(),
+(B[m[32m+                        nanos: res.expires_at.timestamp_subsec_nanos() as i32,
+(B[m[32m+                    }),
+(B[m                 };
+ 
+                 Ok(Response::new(PrepareResourceConversionResponse {
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:234:
+[31m-                    result: Some(prepare_resource_conversion_response::Result::Reservation(reservation)),
+(B[m[32m+                    result: Some(prepare_resource_conversion_response::Result::Reservation(
+(B[m[32m+                        reservation,
+(B[m[32m+                    )),
+(B[m                 }))
+             }
+             Err(e) => {
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:238:
+                 let status = map_domain_error(e);
+                 Ok(Response::new(PrepareResourceConversionResponse {
+[31m-                    result: Some(prepare_resource_conversion_response::Result::Error(ProtoError {
+(B[m[31m-                        code: ErrorCode::InternalError.into(),
+(B[m[31m-                        message: status.message().to_string(),
+(B[m[31m-                    }))
+(B[m[32m+                    result: Some(prepare_resource_conversion_response::Result::Error(
+(B[m[32m+                        ProtoError {
+(B[m[32m+                            code: ErrorCode::InternalError.into(),
+(B[m[32m+                            message: status.message().to_string(),
+(B[m[32m+                        },
+(B[m[32m+                    )),
+(B[m                 }))
+             }
+         }
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:253:
+         let server_id = extract_server_id(&request)?;
+ 
+         let req = request.into_inner();
+[31m-        let ctx = req.context.as_ref().ok_or_else(|| Status::invalid_argument("Missing context"))?;
+(B[m[32m+        let ctx = req
+(B[m[32m+            .context
+(B[m[32m+            .as_ref()
+(B[m[32m+            .ok_or_else(|| Status::invalid_argument("Missing context"))?;
+(B[m 
+         if ctx.server_id != server_id {
+             return Err(Status::permission_denied("Server ID mismatch"));
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:263:
+         let correlation_id = parse_uuid(&ctx.correlation_id)?;
+         let reservation_id = parse_uuid(&req.reservation_id)?;
+ 
+[31m-        let tx = self.conversion_service.commit_conversion(
+(B[m[31m-            idempotency_key,
+(B[m[31m-            stg_domain::ReservationId(reservation_id),
+(B[m[31m-            &server_id,
+(B[m[31m-            correlation_id,
+(B[m[31m-        ).await.map_err(map_domain_error)?;
+(B[m[32m+        let tx = self
+(B[m[32m+            .conversion_service
+(B[m[32m+            .commit_conversion(
+(B[m[32m+                idempotency_key,
+(B[m[32m+                stg_domain::ReservationId(reservation_id),
+(B[m[32m+                &server_id,
+(B[m[32m+                correlation_id,
+(B[m[32m+            )
+(B[m[32m+            .await
+(B[m[32m+            .map_err(map_domain_error)?;
+(B[m 
+         let (created_at, committed_at) = (
+[31m-            Some(prost_types::Timestamp { seconds: tx.created_at.timestamp(), nanos: tx.created_at.timestamp_subsec_nanos() as i32 }),
+(B[m[31m-            tx.committed_at.map(|t| prost_types::Timestamp { seconds: t.timestamp(), nanos: t.timestamp_subsec_nanos() as i32 }),
+(B[m[32m+            Some(prost_types::Timestamp {
+(B[m[32m+                seconds: tx.created_at.timestamp(),
+(B[m[32m+                nanos: tx.created_at.timestamp_subsec_nanos() as i32,
+(B[m[32m+            }),
+(B[m[32m+            tx.committed_at.map(|t| prost_types::Timestamp {
+(B[m[32m+                seconds: t.timestamp(),
+(B[m[32m+                nanos: t.timestamp_subsec_nanos() as i32,
+(B[m[32m+            }),
+(B[m         );
+ 
+         // Find the amount in ledger entries
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:279:
+[31m-        let amount_minor = tx.entries.iter().filter(|e| e.amount_delta > 0).map(|e| e.amount_delta).sum::<i64>();
+(B[m[32m+        let amount_minor = tx
+(B[m[32m+            .entries
+(B[m[32m+            .iter()
+(B[m[32m+            .filter(|e| e.amount_delta > 0)
+(B[m[32m+            .map(|e| e.amount_delta)
+(B[m[32m+            .sum::<i64>();
+(B[m 
+         Ok(Response::new(TransactionResult {
+[31m-            result: Some(transaction_result::Result::Transaction(stg_proto::stg::v1::EconomyTransaction {
+(B[m[31m-                transaction_id: tx.id.0.to_string(),
+(B[m[31m-                r#type: stg_proto::stg::v1::EconomyTransactionType::ResourceConversion.into(),
+(B[m[31m-                status: stg_proto::stg::v1::EconomyTransactionStatus::TransactionCommitted.into(),
+(B[m[31m-                currency_code: tx.currency_code.clone(),
+(B[m[31m-                amount_minor,
+(B[m[31m-                source_account_id: None,
+(B[m[31m-                destination_account_id: None,
+(B[m[31m-                initiating_server_id: server_id,
+(B[m[31m-                request_id: ctx.request_id.clone(),
+(B[m[31m-                metadata: std::collections::HashMap::new(),
+(B[m[31m-                created_at,
+(B[m[31m-                committed_at,
+(B[m[31m-            }))
+(B[m[32m+            result: Some(transaction_result::Result::Transaction(
+(B[m[32m+                stg_proto::stg::v1::EconomyTransaction {
+(B[m[32m+                    transaction_id: tx.id.0.to_string(),
+(B[m[32m+                    r#type: stg_proto::stg::v1::EconomyTransactionType::ResourceConversion.into(),
+(B[m[32m+                    status: stg_proto::stg::v1::EconomyTransactionStatus::TransactionCommitted
+(B[m[32m+                        .into(),
+(B[m[32m+                    currency_code: tx.currency_code.clone(),
+(B[m[32m+                    amount_minor,
+(B[m[32m+                    source_account_id: None,
+(B[m[32m+                    destination_account_id: None,
+(B[m[32m+                    initiating_server_id: server_id,
+(B[m[32m+                    request_id: ctx.request_id.clone(),
+(B[m[32m+                    metadata: std::collections::HashMap::new(),
+(B[m[32m+                    created_at,
+(B[m[32m+                    committed_at,
+(B[m[32m+                },
+(B[m[32m+            )),
+(B[m         }))
+     }
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:303:
+         let server_id = extract_server_id(&request)?;
+ 
+         let req = request.into_inner();
+[31m-        let ctx = req.context.as_ref().ok_or_else(|| Status::invalid_argument("Missing context"))?;
+(B[m[32m+        let ctx = req
+(B[m[32m+            .context
+(B[m[32m+            .as_ref()
+(B[m[32m+            .ok_or_else(|| Status::invalid_argument("Missing context"))?;
+(B[m 
+         if ctx.server_id != server_id {
+             return Err(Status::permission_denied("Server ID mismatch"));
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:311:
+ 
+         let reservation_id = parse_uuid(&req.reservation_id)?;
+ 
+[31m-        match self.conversion_service.abort_conversion(stg_domain::ReservationId(reservation_id)).await {
+(B[m[32m+        match self
+(B[m[32m+            .conversion_service
+(B[m[32m+            .abort_conversion(stg_domain::ReservationId(reservation_id))
+(B[m[32m+            .await
+(B[m[32m+        {
+(B[m             Ok(_) => Ok(Response::new(AbortResourceConversionResponse {
+                 aborted: true,
+                 error: None,
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:335:
+     ) -> Result<Response<EnergyNode>, Status> {
+         let server_id = extract_server_id(&request)?;
+         let req = request.into_inner();
+[31m-        
+(B[m[32m+
+(B[m         let node_type = match stg_proto::stg::v1::EnergyNodeType::try_from(req.r#type) {
+[31m-            Ok(stg_proto::stg::v1::EnergyNodeType::EnergyProducer) => stg_domain::EnergyNodeType::Producer,
+(B[m[31m-            Ok(stg_proto::stg::v1::EnergyNodeType::EnergyConsumer) => stg_domain::EnergyNodeType::Consumer,
+(B[m[31m-            Ok(stg_proto::stg::v1::EnergyNodeType::EnergyStorage) => stg_domain::EnergyNodeType::Storage,
+(B[m[31m-            Ok(stg_proto::stg::v1::EnergyNodeType::EnergyHybrid) => stg_domain::EnergyNodeType::Hybrid,
+(B[m[32m+            Ok(stg_proto::stg::v1::EnergyNodeType::EnergyProducer) => {
+(B[m[32m+                stg_domain::EnergyNodeType::Producer
+(B[m[32m+            }
+(B[m[32m+            Ok(stg_proto::stg::v1::EnergyNodeType::EnergyConsumer) => {
+(B[m[32m+                stg_domain::EnergyNodeType::Consumer
+(B[m[32m+            }
+(B[m[32m+            Ok(stg_proto::stg::v1::EnergyNodeType::EnergyStorage) => {
+(B[m[32m+                stg_domain::EnergyNodeType::Storage
+(B[m[32m+            }
+(B[m[32m+            Ok(stg_proto::stg::v1::EnergyNodeType::EnergyHybrid) => {
+(B[m[32m+                stg_domain::EnergyNodeType::Hybrid
+(B[m[32m+            }
+(B[m             _ => return Err(Status::invalid_argument("Invalid node type")),
+         };
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:362:
+             last_reported_at: chrono::Utc::now(),
+         };
+ 
+[31m-        self.energy_service.register_node(node.clone()).await.map_err(map_domain_error)?;
+(B[m[32m+        self.energy_service
+(B[m[32m+            .register_node(node.clone())
+(B[m[32m+            .await
+(B[m[32m+            .map_err(map_domain_error)?;
+(B[m 
+         Ok(Response::new(EnergyNode {
+             node_id: node.id.0.to_string(),
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:379:
+             efficiency: node.efficiency,
+             health: node.health,
+             revision: node.revision,
+[31m-            last_reported_at: Some(prost_types::Timestamp { seconds: node.last_reported_at.timestamp(), nanos: node.last_reported_at.timestamp_subsec_nanos() as i32 }),
+(B[m[32m+            last_reported_at: Some(prost_types::Timestamp {
+(B[m[32m+                seconds: node.last_reported_at.timestamp(),
+(B[m[32m+                nanos: node.last_reported_at.timestamp_subsec_nanos() as i32,
+(B[m[32m+            }),
+(B[m         }))
+     }
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:389:
+     ) -> Result<Response<ReportEnergyObservationResponse>, Status> {
+         let _server_id = extract_server_id(&request)?;
+         let req = request.into_inner();
+[31m-        let obs = req.observation.ok_or_else(|| Status::invalid_argument("Missing observation"))?;
+(B[m[32m+        let obs = req
+(B[m[32m+            .observation
+(B[m[32m+            .ok_or_else(|| Status::invalid_argument("Missing observation"))?;
+(B[m         let node_id = parse_uuid(&obs.node_id)?;
+ 
+[31m-        self.energy_service.report_observation(node_id, obs.observed_production_watts, obs.observed_consumption_watts, obs.observed_storage_wh)
+(B[m[32m+        self.energy_service
+(B[m[32m+            .report_observation(
+(B[m[32m+                node_id,
+(B[m[32m+                obs.observed_production_watts,
+(B[m[32m+                obs.observed_consumption_watts,
+(B[m[32m+                obs.observed_storage_wh,
+(B[m[32m+            )
+(B[m             .await
+             .map_err(map_domain_error)?;
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:399:
+         Ok(Response::new(ReportEnergyObservationResponse {
+[31m-            result: None
+(B[m[32m+            result: None,
+(B[m         }))
+     }
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:405:
+         &self,
+         _request: Request<GetEnergyStateRequest>,
+     ) -> Result<Response<EnergyState>, Status> {
+[31m-        let state = self.energy_service.get_state().await.map_err(map_domain_error)?;
+(B[m[31m-        
+(B[m[32m+        let state = self
+(B[m[32m+            .energy_service
+(B[m[32m+            .get_state()
+(B[m[32m+            .await
+(B[m[32m+            .map_err(map_domain_error)?;
+(B[m[32m+
+(B[m         let mode = match state.mode {
+             stg_domain::EnergyMode::Normal => stg_proto::stg::v1::EnergyMode::EnergyNormal,
+             stg_domain::EnergyMode::Surplus => stg_proto::stg::v1::EnergyMode::EnergySurplus,
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:426:
+             simulation_tick: state.simulation_tick,
+             revision: 0,
+             warnings: vec![],
+[31m-            updated_at: Some(prost_types::Timestamp { seconds: chrono::Utc::now().timestamp(), nanos: 0 }),
+(B[m[32m+            updated_at: Some(prost_types::Timestamp {
+(B[m[32m+                seconds: chrono::Utc::now().timestamp(),
+(B[m[32m+                nanos: 0,
+(B[m[32m+            }),
+(B[m         }))
+     }
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:438:
+             currencies: vec![],
+             energy_mode: stg_proto::stg::v1::EnergyMode::EnergyNormal.into(),
+             pricing_revision: 0,
+[31m-            updated_at: Some(prost_types::Timestamp { seconds: chrono::Utc::now().timestamp(), nanos: 0 }),
+(B[m[32m+            updated_at: Some(prost_types::Timestamp {
+(B[m[32m+                seconds: chrono::Utc::now().timestamp(),
+(B[m[32m+                nanos: 0,
+(B[m[32m+            }),
+(B[m         }))
+     }
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/grpc/handlers.rs:454:
+             active_events: vec![],
+             simulation_tick: 0,
+             revision: 0,
+[31m-            updated_at: Some(prost_types::Timestamp { seconds: chrono::Utc::now().timestamp(), nanos: 0 }),
+(B[m[32m+            updated_at: Some(prost_types::Timestamp {
+(B[m[32m+                seconds: chrono::Utc::now().timestamp(),
+(B[m[32m+                nanos: 0,
+(B[m[32m+            }),
+(B[m         }))
+     }
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/lib.rs:1:
+ pub mod grpc;
+ 
+[32m+use crate::grpc::auth::auth_interceptor;
+(B[m[32m+use crate::grpc::handlers::StgGrpcServer;
+(B[m use std::collections::HashMap;
+ use std::sync::Arc;
+[31m-use stg_application::{EconomyService, ConversionService, PlayerService, EnergyService};
+(B[m[32m+use stg_application::{ConversionService, EconomyService, EnergyService, PlayerService};
+(B[m use stg_proto::stg::v1::stg_backend_server::StgBackendServer;
+ use tonic::transport::Server;
+[31m-use crate::grpc::auth::auth_interceptor;
+(B[m[31m-use crate::grpc::handlers::StgGrpcServer;
+(B[m 
+ pub async fn run_server(
+     address: std::net::SocketAddr,
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-api/src/lib.rs:28:
+         auth_interceptor(req, server_tokens.clone())
+     });
+ 
+[31m-    Server::builder()
+(B[m[31m-        .add_service(svc)
+(B[m[31m-        .serve(address)
+(B[m[31m-        .await?;
+(B[m[32m+    Server::builder().add_service(svc).serve(address).await?;
+(B[m 
+     Ok(())
+ }
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-application/src/lib.rs:3:
+ use sha2::{Digest, Sha256};
+ use std::collections::HashMap;
+ use stg_domain::{
+[31m-    ConversionDirection, ConversionQuote, DomainError, DomainEvent, DomainEventPayload,
+(B[m[31m-    EconomyTransaction, EconomyTransactionStatus, EconomyTransactionType, EnergyMode, EnergyNode,
+(B[m[31m-    EnergyState, LedgerEntry, Money, Player, PlayerId, PlayerStatus, PlayerTransition,
+(B[m[31m-    ReservationId, ReservationStatus, ResourceConversionReservation, ResourceRef, TransactionId, TransitionId,
+(B[m[31m-    TransitionStatus, Wallet, WalletId, ConversionRule,
+(B[m[32m+    ConversionDirection, ConversionQuote, ConversionRule, DomainError, DomainEvent,
+(B[m[32m+    DomainEventPayload, EconomyTransaction, EconomyTransactionStatus, EconomyTransactionType,
+(B[m[32m+    EnergyMode, EnergyNode, EnergyState, LedgerEntry, Money, Player, PlayerId, PlayerStatus,
+(B[m[32m+    PlayerTransition, ReservationId, ReservationStatus, ResourceConversionReservation, ResourceRef,
+(B[m[32m+    TransactionId, TransitionId, TransitionStatus, Wallet, WalletId,
+(B[m };
+ use uuid::Uuid;
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-application/src/lib.rs:58:
+         correlation_id: Uuid,
+     ) -> Result<EconomyTransaction, DomainError>;
+ 
+[31m-    async fn find_by_id(&self, id: TransactionId) -> Result<Option<EconomyTransaction>, DomainError>;
+(B[m[32m+    async fn find_by_id(
+(B[m[32m+        &self,
+(B[m[32m+        id: TransactionId,
+(B[m[32m+    ) -> Result<Option<EconomyTransaction>, DomainError>;
+(B[m     async fn is_idempotent_processed(&self, key: Uuid) -> Result<bool, DomainError>;
+[31m-    async fn save_processed_request(&self, key: Uuid, result_json: &str) -> Result<(), DomainError>;
+(B[m[32m+    async fn save_processed_request(&self, key: Uuid, result_json: &str)
+(B[m[32m+        -> Result<(), DomainError>;
+(B[m     async fn get_processed_result(&self, key: Uuid) -> Result<Option<String>, DomainError>;
+ }
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-application/src/lib.rs:89:
+ 
+ #[async_trait]
+ pub trait ConversionRepository: Send + Sync {
+[31m-    async fn find_rule(&self, namespace: &str, path: &str, direction: ConversionDirection) -> Result<Option<ConversionRule>, DomainError>;
+(B[m[31m-    async fn save_reservation(&self, reservation: &ResourceConversionReservation) -> Result<(), DomainError>;
+(B[m[31m-    async fn find_reservation_by_id(&self, id: ReservationId) -> Result<Option<ResourceConversionReservation>, DomainError>;
+(B[m[31m-    
+(B[m[32m+    async fn find_rule(
+(B[m[32m+        &self,
+(B[m[32m+        namespace: &str,
+(B[m[32m+        path: &str,
+(B[m[32m+        direction: ConversionDirection,
+(B[m[32m+    ) -> Result<Option<ConversionRule>, DomainError>;
+(B[m[32m+    async fn save_reservation(
+(B[m[32m+        &self,
+(B[m[32m+        reservation: &ResourceConversionReservation,
+(B[m[32m+    ) -> Result<(), DomainError>;
+(B[m[32m+    async fn find_reservation_by_id(
+(B[m[32m+        &self,
+(B[m[32m+        id: ReservationId,
+(B[m[32m+    ) -> Result<Option<ResourceConversionReservation>, DomainError>;
+(B[m[32m+
+(B[m     /// Aborts a reservation if it is PREPARED. Fails if COMMITTED. Leaves EXPIRED as is. Returns the final state.
+[31m-    async fn abort_reservation(&self, id: ReservationId) -> Result<ResourceConversionReservation, DomainError>;
+(B[m[32m+    async fn abort_reservation(
+(B[m[32m+        &self,
+(B[m[32m+        id: ReservationId,
+(B[m[32m+    ) -> Result<ResourceConversionReservation, DomainError>;
+(B[m 
+     /// Executes the conversion atomatically, mutating the wallet, logging the transaction, etc.
+     async fn commit_conversion_atomic(
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-application/src/lib.rs:196:
+         player_uuid: Uuid,
+     ) -> Result<(Player, Vec<Wallet>), DomainError> {
+         let player_id = PlayerId(player_uuid);
+[31m-        let player = self.player_repo.find_by_id(player_id).await?
+(B[m[32m+        let player = self
+(B[m[32m+            .player_repo
+(B[m[32m+            .find_by_id(player_id)
+(B[m[32m+            .await?
+(B[m             .ok_or(DomainError::PlayerNotFound(player_uuid))?;
+ 
+[31m-        let ash_wallet = self.wallet_repo.find_by_player_and_currency(player_id, "ASH").await?;
+(B[m[31m-        
+(B[m[32m+        let ash_wallet = self
+(B[m[32m+            .wallet_repo
+(B[m[32m+            .find_by_player_and_currency(player_id, "ASH")
+(B[m[32m+            .await?;
+(B[m[32m+
+(B[m         let mut wallets = Vec::new();
+         if let Some(w) = ash_wallet {
+             wallets.push(w);
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-application/src/lib.rs:267:
+         }
+ 
+         // Load rule
+[31m-        let rule = self.conv_repo.find_rule(namespace, path, direction).await?
+(B[m[32m+        let rule = self
+(B[m[32m+            .conv_repo
+(B[m[32m+            .find_rule(namespace, path, direction)
+(B[m[32m+            .await?
+(B[m             .ok_or(DomainError::ConversionRuleNotFound)?;
+ 
+         if !rule.enabled {
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-application/src/lib.rs:283:
+         // Wait! Prepare needs to "persist idempotent response". We will do this by saving the reservation.
+         // Let's create a deterministic reservation ID based on idempotency_key to prevent duplicates.
+         let reservation_id = ReservationId(idempotency_key);
+[31m-        
+(B[m[31m-        if let Some(existing) = self.conv_repo.find_reservation_by_id(reservation_id).await? {
+(B[m[32m+
+(B[m[32m+        if let Some(existing) = self
+(B[m[32m+            .conv_repo
+(B[m[32m+            .find_reservation_by_id(reservation_id)
+(B[m[32m+            .await?
+(B[m[32m+        {
+(B[m             return Ok(existing);
+         }
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-application/src/lib.rs:292:
+         let total_price = (amount as i128)
+             .checked_mul(rule.unit_price_minor as i128)
+             .ok_or(DomainError::ArithmeticOverflow)?;
+[31m-            
+(B[m[32m+
+(B[m         if total_price > i64::MAX as i128 {
+             return Err(DomainError::ArithmeticOverflow);
+         }
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-application/src/lib.rs:299:
+[31m-        
+(B[m[32m+
+(B[m         let total_price_minor = total_price as i64;
+ 
+         let quote = ConversionQuote {
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-application/src/lib.rs:348:
+     ) -> Result<EconomyTransaction, DomainError> {
+         let fingerprint = format!("COMMIT:{}", reservation_id.0);
+ 
+[31m-        self.conv_repo.commit_conversion_atomic(
+(B[m[31m-            idempotency_key,
+(B[m[31m-            &fingerprint,
+(B[m[31m-            reservation_id,
+(B[m[31m-            initiating_server,
+(B[m[31m-            correlation_id,
+(B[m[31m-        ).await
+(B[m[32m+        self.conv_repo
+(B[m[32m+            .commit_conversion_atomic(
+(B[m[32m+                idempotency_key,
+(B[m[32m+                &fingerprint,
+(B[m[32m+                reservation_id,
+(B[m[32m+                initiating_server,
+(B[m[32m+                correlation_id,
+(B[m[32m+            )
+(B[m[32m+            .await
+(B[m     }
+ 
+     pub async fn abort_conversion(
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-application/src/lib.rs:378:
+         self.energy_repo.save_node(&node).await
+     }
+ 
+[31m-    pub async fn report_observation(&self, node_id: Uuid, prod: i64, cons: i64, stored: i64) -> Result<(), DomainError> {
+(B[m[31m-        let mut node = self.energy_repo.find_node_by_id(node_id).await?.ok_or(DomainError::EnergyNodeNotFound(node_id))?;
+(B[m[32m+    pub async fn report_observation(
+(B[m[32m+        &self,
+(B[m[32m+        node_id: Uuid,
+(B[m[32m+        prod: i64,
+(B[m[32m+        cons: i64,
+(B[m[32m+        stored: i64,
+(B[m[32m+    ) -> Result<(), DomainError> {
+(B[m[32m+        let mut node = self
+(B[m[32m+            .energy_repo
+(B[m[32m+            .find_node_by_id(node_id)
+(B[m[32m+            .await?
+(B[m[32m+            .ok_or(DomainError::EnergyNodeNotFound(node_id))?;
+(B[m         node.production_watts = prod;
+         node.consumption_watts = cons;
+         node.stored_wh = stored;
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-application/src/lib.rs:415:
+     let mut hasher = Sha256::new();
+     let payload = format!(
+         "{}:{}:{}:{}:{}:{}",
+[31m-        from_player.0,
+(B[m[31m-        to_player.0,
+(B[m[31m-        currency,
+(B[m[31m-        amount_minor,
+(B[m[31m-        initiating_server,
+(B[m[31m-        correlation_id
+(B[m[32m+        from_player.0, to_player.0, currency, amount_minor, initiating_server, correlation_id
+(B[m     );
+     hasher.update(payload.as_bytes());
+     let result = hasher.finalize();
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-application/src/lib.rs:467:
+             correlation_id,
+         );
+ 
+[31m-        self.tx_repo.execute_transfer_atomic(
+(B[m[31m-            idempotency_key,
+(B[m[31m-            &fingerprint,
+(B[m[31m-            from_player,
+(B[m[31m-            to_player,
+(B[m[31m-            currency,
+(B[m[31m-            amount_minor,
+(B[m[31m-            &initiating_server,
+(B[m[31m-            correlation_id,
+(B[m[31m-        )
+(B[m[31m-        .await
+(B[m[32m+        self.tx_repo
+(B[m[32m+            .execute_transfer_atomic(
+(B[m[32m+                idempotency_key,
+(B[m[32m+                &fingerprint,
+(B[m[32m+                from_player,
+(B[m[32m+                to_player,
+(B[m[32m+                currency,
+(B[m[32m+                amount_minor,
+(B[m[32m+                &initiating_server,
+(B[m[32m+                correlation_id,
+(B[m[32m+            )
+(B[m[32m+            .await
+(B[m     }
+ }
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-application/src/lib.rs:538:
+         consumption: i64,
+         storage: i64,
+     ) -> Result<EnergyNode, DomainError> {
+[31m-        let mut node = self.energy_repo.find_node_by_id(node_uuid).await?
+(B[m[32m+        let mut node = self
+(B[m[32m+            .energy_repo
+(B[m[32m+            .find_node_by_id(node_uuid)
+(B[m[32m+            .await?
+(B[m             .ok_or(DomainError::EnergyNodeNotFound(node_uuid))?;
+ 
+         // Validate capacity constraints
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-domain/src/lib.rs:25:
+     #[error("Energy node not found: {0}")]
+     EnergyNodeNotFound(Uuid),
+ 
+[31m-    #[error("Insufficient funds in wallet {wallet_id}: current balance {balance}, required {required}")]
+(B[m[32m+    #[error(
+(B[m[32m+        "Insufficient funds in wallet {wallet_id}: current balance {balance}, required {required}"
+(B[m[32m+    )]
+(B[m     InsufficientFunds {
+         wallet_id: Uuid,
+         balance: i64,
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-domain/src/lib.rs:39:
+     ArithmeticOverflow,
+ 
+     #[error("Idempotency conflict for request {request_id}: {details}")]
+[31m-    IdempotencyConflict {
+(B[m[31m-        request_id: Uuid,
+(B[m[31m-        details: String,
+(B[m[31m-    },
+(B[m[32m+    IdempotencyConflict { request_id: Uuid, details: String },
+(B[m 
+     #[error("Conversion reservation not found: {0}")]
+     ConversionReservationNotFound(Uuid),
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-domain/src/lib.rs:57:
+     ConversionRuleNotFound,
+ 
+     #[error("Server identity mismatch: expected {expected}, actual {actual}")]
+[31m-    ServerIdentityMismatch {
+(B[m[31m-        expected: String,
+(B[m[31m-        actual: String,
+(B[m[31m-    },
+(B[m[32m+    ServerIdentityMismatch { expected: String, actual: String },
+(B[m }
+ 
+ // =========================================================================
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-domain/src/lib.rs:134:
+                 required: amount.0,
+             });
+         }
+[31m-        self.balance.0 = self.balance.0.checked_sub(amount.0)
+(B[m[32m+        self.balance.0 = self
+(B[m[32m+            .balance
+(B[m[32m+            .0
+(B[m[32m+            .checked_sub(amount.0)
+(B[m             .ok_or(DomainError::ArithmeticOverflow)?;
+         Ok(())
+     }
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-domain/src/lib.rs:141:
+ 
+     pub fn deposit(&mut self, amount: Money) -> Result<(), DomainError> {
+[31m-        self.balance.0 = self.balance.0.checked_add(amount.0)
+(B[m[32m+        self.balance.0 = self
+(B[m[32m+            .balance
+(B[m[32m+            .0
+(B[m[32m+            .checked_add(amount.0)
+(B[m             .ok_or(DomainError::ArithmeticOverflow)?;
+         Ok(())
+     }
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-domain/src/lib.rs:206:
+     ) -> Result<Self, DomainError> {
+         let mut sum: i64 = 0;
+         for entry in &entries {
+[31m-            sum = sum.checked_add(entry.amount_delta)
+(B[m[32m+            sum = sum
+(B[m[32m+                .checked_add(entry.amount_delta)
+(B[m                 .ok_or(DomainError::ArithmeticOverflow)?;
+         }
+         if sum != 0 {
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-domain/src/lib.rs:445:
+         // Insufficient funds
+         let err = wallet.withdraw(Money(120)).unwrap_err();
+         match err {
+[31m-            DomainError::InsufficientFunds { wallet_id, balance, required } => {
+(B[m[32m+            DomainError::InsufficientFunds {
+(B[m[32m+                wallet_id,
+(B[m[32m+                balance,
+(B[m[32m+                required,
+(B[m[32m+            } => {
+(B[m                 assert_eq!(wallet_id, wallet.id.0);
+                 assert_eq!(balance, 110);
+                 assert_eq!(required, 120);
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-domain/src/lib.rs:501:
+             Uuid::new_v4(),
+             "server-1".to_string(),
+             std::collections::HashMap::new(),
+[31m-        ).unwrap_err();
+(B[m[32m+        )
+(B[m[32m+        .unwrap_err();
+(B[m 
+         match tx_err {
+             DomainError::LedgerImbalance => {}
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-domain/src/lib.rs:509:
+         }
+     }
+ }
+[31m-
+(B[m 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1:
+ use async_trait::async_trait;
+ use chrono::{DateTime, Utc};
+ use serde_json;
+[31m-use sqlx::{PgPool, Postgres, Transaction, Row};
+(B[m[32m+use sqlx::{PgPool, Postgres, Row, Transaction};
+(B[m use std::collections::HashMap;
+ use std::sync::Arc;
+ use stg_application::{
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:8:
+[31m-    ConversionRepository, EnergyRepository, EventLogRepository, PlayerRepository, QueuePublisher, TransactionRepository,
+(B[m[31m-    WalletRepository,
+(B[m[32m+    ConversionRepository, EnergyRepository, EventLogRepository, PlayerRepository, QueuePublisher,
+(B[m[32m+    TransactionRepository, WalletRepository,
+(B[m };
+ use stg_domain::{
+[31m-    DomainError, DomainEvent, EconomyTransaction, EconomyTransactionType, EnergyMode, EnergyNode, EnergyNodeType,
+(B[m[31m-    EnergyState, LedgerEntry, Money, Player, PlayerId, PlayerStatus, Wallet, WalletId,
+(B[m[31m-    TransactionId, ResourceConversionReservation, ReservationId, ConversionDirection, ReservationStatus,
+(B[m[31m-    ConversionRule,
+(B[m[32m+    ConversionDirection, ConversionRule, DomainError, DomainEvent, EconomyTransaction,
+(B[m[32m+    EconomyTransactionType, EnergyMode, EnergyNode, EnergyNodeType, EnergyState, LedgerEntry,
+(B[m[32m+    Money, Player, PlayerId, PlayerStatus, ReservationId, ReservationStatus,
+(B[m[32m+    ResourceConversionReservation, TransactionId, Wallet, WalletId,
+(B[m };
+ use uuid::Uuid;
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:47:
+ 
+         match row {
+             Some(r) => {
+[31m-                let id_val: Uuid = r.try_get("id").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let username_val: String = r.try_get("username").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let status_str: String = r.try_get("status").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let created_at_val: DateTime<Utc> = r.try_get("created_at").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let last_seen_at_val: DateTime<Utc> = r.try_get("last_seen_at").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let revision_val: i64 = r.try_get("revision").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let id_val: Uuid = r
+(B[m[32m+                    .try_get("id")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let username_val: String = r
+(B[m[32m+                    .try_get("username")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let status_str: String = r
+(B[m[32m+                    .try_get("status")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let created_at_val: DateTime<Utc> = r
+(B[m[32m+                    .try_get("created_at")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let last_seen_at_val: DateTime<Utc> = r
+(B[m[32m+                    .try_get("last_seen_at")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let revision_val: i64 = r
+(B[m[32m+                    .try_get("revision")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+                 let status = match status_str.as_str() {
+                     "ACTIVE" => PlayerStatus::Active,
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:59:
+                     "LOCKED" => PlayerStatus::Locked,
+                     "TRANSITIONING" => PlayerStatus::Transitioning,
+                     "BANNED" => PlayerStatus::Banned,
+[31m-                    _ => return Err(DomainError::InternalStateError("Invalid status in DB".to_string())),
+(B[m[32m+                    _ => {
+(B[m[32m+                        return Err(DomainError::InternalStateError(
+(B[m[32m+                            "Invalid status in DB".to_string(),
+(B[m[32m+                        ))
+(B[m[32m+                    }
+(B[m                 };
+ 
+                 Ok(Some(Player {
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:87:
+             r#"
+             INSERT INTO players (id, username, status, created_at, last_seen_at, revision)
+             VALUES ($1, $2, $3, $4, $5, $6)
+[31m-            "#
+(B[m[32m+            "#,
+(B[m         )
+         .bind(player.id.0)
+         .bind(&player.username)
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:115:
+             UPDATE players
+             SET username = $1, status = $2, last_seen_at = $3, revision = $4
+             WHERE id = $5 AND revision = $6
+[31m-            "#
+(B[m[32m+            "#,
+(B[m         )
+         .bind(&player.username)
+         .bind(status_str)
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:166:
+ 
+         match row {
+             Some(r) => {
+[31m-                let id_val: Uuid = r.try_get("id").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let player_id_val: Uuid = r.try_get("player_id").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let currency_code_val: String = r.try_get("currency_code").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let balance_val: i64 = r.try_get("balance").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let revision_val: i64 = r.try_get("revision").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let id_val: Uuid = r
+(B[m[32m+                    .try_get("id")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let player_id_val: Uuid = r
+(B[m[32m+                    .try_get("player_id")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let currency_code_val: String = r
+(B[m[32m+                    .try_get("currency_code")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let balance_val: i64 = r
+(B[m[32m+                    .try_get("balance")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let revision_val: i64 = r
+(B[m[32m+                    .try_get("revision")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+                 Ok(Some(Wallet {
+                     id: WalletId(id_val),
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:204:
+ 
+         match row {
+             Some(r) => {
+[31m-                let id_val: Uuid = r.try_get("id").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let player_id_val: Uuid = r.try_get("player_id").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let currency_code_val: String = r.try_get("currency_code").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let balance_val: i64 = r.try_get("balance").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let revision_val: i64 = r.try_get("revision").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let id_val: Uuid = r
+(B[m[32m+                    .try_get("id")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let player_id_val: Uuid = r
+(B[m[32m+                    .try_get("player_id")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let currency_code_val: String = r
+(B[m[32m+                    .try_get("currency_code")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let balance_val: i64 = r
+(B[m[32m+                    .try_get("balance")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let revision_val: i64 = r
+(B[m[32m+                    .try_get("revision")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+                 Ok(Some(Wallet {
+                     id: WalletId(id_val),
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:227:
+             r#"
+             INSERT INTO wallets (id, player_id, currency_code, balance, revision)
+             VALUES ($1, $2, $3, $4, $5)
+[31m-            "#
+(B[m[32m+            "#,
+(B[m         )
+         .bind(wallet.id.0)
+         .bind(wallet.player_id.0)
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:247:
+             UPDATE wallets
+             SET balance = $1, revision = $2
+             WHERE id = $3 AND revision = $4
+[31m-            "#
+(B[m[32m+            "#,
+(B[m         )
+         .bind(wallet.balance.minor_units())
+         .bind((wallet.revision + 1) as i64)
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:354:
+         // 3. Update related wallets utilizing locking and optimistic checks
+         for wallet in updated_wallets {
+             // Apply lock check (SELECT FOR UPDATE) to assure absolute consistency
+[31m-            let locked_row = sqlx::query(
+(B[m[31m-                "SELECT revision FROM wallets WHERE id = $1 FOR UPDATE"
+(B[m[31m-            )
+(B[m[31m-            .bind(wallet.id.0)
+(B[m[31m-            .fetch_one(&mut *tx)
+(B[m[31m-            .await
+(B[m[31m-            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let locked_row = sqlx::query("SELECT revision FROM wallets WHERE id = $1 FOR UPDATE")
+(B[m[32m+                .bind(wallet.id.0)
+(B[m[32m+                .fetch_one(&mut *tx)
+(B[m[32m+                .await
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+[31m-            let locked_revision: i64 = locked_row.try_get("revision")
+(B[m[32m+            let locked_revision: i64 = locked_row
+(B[m[32m+                .try_get("revision")
+(B[m                 .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+ 
+             if locked_revision != wallet.revision as i64 {
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:378:
+                 UPDATE wallets
+                 SET balance = $1, revision = $2
+                 WHERE id = $3
+[31m-                "#
+(B[m[32m+                "#,
+(B[m             )
+             .bind(wallet.balance.minor_units())
+             .bind((wallet.revision + 1) as i64)
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:406:
+         initiating_server: &str,
+         correlation_id: Uuid,
+     ) -> Result<EconomyTransaction, DomainError> {
+[31m-        let mut tx = self.pool.begin().await
+(B[m[32m+        let mut tx = self
+(B[m[32m+            .pool
+(B[m[32m+            .begin()
+(B[m[32m+            .await
+(B[m             .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+ 
+         // 1. Check idempotency log
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:419:
+         .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+ 
+         if let Some(r) = row {
+[31m-            let op_type: String = r.try_get("operation_type").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-            let stored_fingerprint: String = r.try_get("request_fingerprint").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-            let payload: String = r.try_get("response_payload").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let op_type: String = r
+(B[m[32m+                .try_get("operation_type")
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let stored_fingerprint: String = r
+(B[m[32m+                .try_get("request_fingerprint")
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let payload: String = r
+(B[m[32m+                .try_get("response_payload")
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+             if op_type != "PLAYER_TRANSFER" {
+                 return Err(DomainError::IdempotencyConflict {
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:428:
+                     request_id: idempotency_key,
+[31m-                    details: format!("Conflict: request was previously run as a different operation type: {}", op_type),
+(B[m[32m+                    details: format!(
+(B[m[32m+                        "Conflict: request was previously run as a different operation type: {}",
+(B[m[32m+                        op_type
+(B[m[32m+                    ),
+(B[m                 });
+             }
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:433:
+             if stored_fingerprint != fingerprint {
+                 return Err(DomainError::IdempotencyConflict {
+                     request_id: idempotency_key,
+[31m-                    details: "Conflict: duplicate request ID used with a different payload fingerprint".to_string(),
+(B[m[32m+                    details:
+(B[m[32m+                        "Conflict: duplicate request ID used with a different payload fingerprint"
+(B[m[32m+                            .to_string(),
+(B[m                 });
+             }
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:440:
+             let transaction: EconomyTransaction = serde_json::from_str(&payload)
+                 .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+[31m-            tx.commit().await.map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            tx.commit()
+(B[m[32m+                .await
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m             return Ok(transaction);
+         }
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:446:
+         // 2. Load source and destination wallets to get their IDs
+         let source_wallet_row = sqlx::query(
+[31m-            "SELECT id, balance, revision FROM wallets WHERE player_id = $1 AND currency_code = $2"
+(B[m[32m+            "SELECT id, balance, revision FROM wallets WHERE player_id = $1 AND currency_code = $2",
+(B[m         )
+         .bind(from_player.0)
+         .bind(currency)
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:459:
+         };
+ 
+         let dest_wallet_row = sqlx::query(
+[31m-            "SELECT id, balance, revision FROM wallets WHERE player_id = $1 AND currency_code = $2"
+(B[m[32m+            "SELECT id, balance, revision FROM wallets WHERE player_id = $1 AND currency_code = $2",
+(B[m         )
+         .bind(to_player.0)
+         .bind(currency)
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:472:
+             None => return Err(DomainError::PlayerNotFound(to_player.0)),
+         };
+ 
+[31m-        let source_wallet_id: Uuid = source_wallet_data.try_get("id").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-        let dest_wallet_id: Uuid = dest_wallet_data.try_get("id").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+        let source_wallet_id: Uuid = source_wallet_data
+(B[m[32m+            .try_get("id")
+(B[m[32m+            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+        let dest_wallet_id: Uuid = dest_wallet_data
+(B[m[32m+            .try_get("id")
+(B[m[32m+            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+         if source_wallet_id == dest_wallet_id {
+[31m-            return Err(DomainError::InternalStateError("Cannot transfer money to the same wallet".to_string()));
+(B[m[32m+            return Err(DomainError::InternalStateError(
+(B[m[32m+                "Cannot transfer money to the same wallet".to_string(),
+(B[m[32m+            ));
+(B[m         }
+ 
+         // 3. Deterministic Wallet Locking Order
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:487:
+         };
+ 
+         // Perform SELECT ... FOR UPDATE locks
+[31m-        let first_wallet_row = sqlx::query("SELECT id, balance, revision FROM wallets WHERE id = $1 FOR UPDATE")
+(B[m[31m-            .bind(first_lock_id)
+(B[m[31m-            .fetch_one(&mut *tx)
+(B[m[31m-            .await
+(B[m[31m-            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+        let first_wallet_row =
+(B[m[32m+            sqlx::query("SELECT id, balance, revision FROM wallets WHERE id = $1 FOR UPDATE")
+(B[m[32m+                .bind(first_lock_id)
+(B[m[32m+                .fetch_one(&mut *tx)
+(B[m[32m+                .await
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+[31m-        let second_wallet_row = sqlx::query("SELECT id, balance, revision FROM wallets WHERE id = $1 FOR UPDATE")
+(B[m[31m-            .bind(second_lock_id)
+(B[m[31m-            .fetch_one(&mut *tx)
+(B[m[31m-            .await
+(B[m[31m-            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+        let second_wallet_row =
+(B[m[32m+            sqlx::query("SELECT id, balance, revision FROM wallets WHERE id = $1 FOR UPDATE")
+(B[m[32m+                .bind(second_lock_id)
+(B[m[32m+                .fetch_one(&mut *tx)
+(B[m[32m+                .await
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+         // Extract latest values from locked rows
+[31m-        let locked_source_row = if source_wallet_id == first_lock_id { &first_wallet_row } else { &second_wallet_row };
+(B[m[31m-        let locked_dest_row = if dest_wallet_id == first_lock_id { &first_wallet_row } else { &second_wallet_row };
+(B[m[32m+        let locked_source_row = if source_wallet_id == first_lock_id {
+(B[m[32m+            &first_wallet_row
+(B[m[32m+        } else {
+(B[m[32m+            &second_wallet_row
+(B[m[32m+        };
+(B[m[32m+        let locked_dest_row = if dest_wallet_id == first_lock_id {
+(B[m[32m+            &first_wallet_row
+(B[m[32m+        } else {
+(B[m[32m+            &second_wallet_row
+(B[m[32m+        };
+(B[m 
+[31m-        let source_balance: i64 = locked_source_row.try_get("balance").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-        let source_revision: i64 = locked_source_row.try_get("revision").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+        let source_balance: i64 = locked_source_row
+(B[m[32m+            .try_get("balance")
+(B[m[32m+            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+        let source_revision: i64 = locked_source_row
+(B[m[32m+            .try_get("revision")
+(B[m[32m+            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+[31m-        let dest_balance: i64 = locked_dest_row.try_get("balance").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-        let dest_revision: i64 = locked_dest_row.try_get("revision").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+        let dest_balance: i64 = locked_dest_row
+(B[m[32m+            .try_get("balance")
+(B[m[32m+            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+        let dest_revision: i64 = locked_dest_row
+(B[m[32m+            .try_get("revision")
+(B[m[32m+            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+         // 4. Perform authoritative domain money calculations using checked arithmetic
+         if source_balance < amount_minor {
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:518:
+             });
+         }
+ 
+[31m-        let new_source_balance = source_balance.checked_sub(amount_minor)
+(B[m[32m+        let new_source_balance = source_balance
+(B[m[32m+            .checked_sub(amount_minor)
+(B[m             .ok_or(DomainError::ArithmeticOverflow)?;
+[31m-        let new_dest_balance = dest_balance.checked_add(amount_minor)
+(B[m[32m+        let new_dest_balance = dest_balance
+(B[m[32m+            .checked_add(amount_minor)
+(B[m             .ok_or(DomainError::ArithmeticOverflow)?;
+ 
+         // 5. Update wallets
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:677:
+         .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+ 
+         // 12. Commit transaction
+[31m-        tx.commit().await.map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+        tx.commit()
+(B[m[32m+            .await
+(B[m[32m+            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+         Ok(economy_tx)
+     }
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:684:
+ 
+[31m-    async fn find_by_id(&self, _id: TransactionId) -> Result<Option<EconomyTransaction>, DomainError> {
+(B[m[32m+    async fn find_by_id(
+(B[m[32m+        &self,
+(B[m[32m+        _id: TransactionId,
+(B[m[32m+    ) -> Result<Option<EconomyTransaction>, DomainError> {
+(B[m         Ok(None)
+     }
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:689:
+     async fn is_idempotent_processed(&self, key: Uuid) -> Result<bool, DomainError> {
+[31m-        let row = sqlx::query(
+(B[m[31m-            "SELECT count(*) as count FROM processed_requests WHERE request_id = $1"
+(B[m[31m-        )
+(B[m[31m-        .bind(key)
+(B[m[31m-        .fetch_one(&self.pool)
+(B[m[31m-        .await
+(B[m[31m-        .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+        let row =
+(B[m[32m+            sqlx::query("SELECT count(*) as count FROM processed_requests WHERE request_id = $1")
+(B[m[32m+                .bind(key)
+(B[m[32m+                .fetch_one(&self.pool)
+(B[m[32m+                .await
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+[31m-        let count: i64 = row.try_get("count").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+        let count: i64 = row
+(B[m[32m+            .try_get("count")
+(B[m[32m+            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m         Ok(count > 0)
+     }
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:702:
+[31m-    async fn save_processed_request(&self, key: Uuid, result_json: &str) -> Result<(), DomainError> {
+(B[m[32m+    async fn save_processed_request(
+(B[m[32m+        &self,
+(B[m[32m+        key: Uuid,
+(B[m[32m+        result_json: &str,
+(B[m[32m+    ) -> Result<(), DomainError> {
+(B[m         sqlx::query(
+             r#"
+             INSERT INTO processed_requests (request_id, operation_type, request_fingerprint, response_payload, processed_at)
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:719:
+     }
+ 
+     async fn get_processed_result(&self, key: Uuid) -> Result<Option<String>, DomainError> {
+[31m-        let row = sqlx::query(
+(B[m[31m-            "SELECT response_payload FROM processed_requests WHERE request_id = $1"
+(B[m[31m-        )
+(B[m[31m-        .bind(key)
+(B[m[31m-        .fetch_optional(&self.pool)
+(B[m[31m-        .await
+(B[m[31m-        .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+        let row =
+(B[m[32m+            sqlx::query("SELECT response_payload FROM processed_requests WHERE request_id = $1")
+(B[m[32m+                .bind(key)
+(B[m[32m+                .fetch_optional(&self.pool)
+(B[m[32m+                .await
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+         match row {
+             Some(r) => {
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:732:
+[31m-                let payload: String = r.try_get("response_payload").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let payload: String = r
+(B[m[32m+                    .try_get("response_payload")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m                 Ok(Some(payload))
+             }
+             None => Ok(None),
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:790:
+ 
+ #[async_trait]
+ impl ConversionRepository for PostgresConversionRepository {
+[31m-    async fn find_rule(&self, namespace: &str, path: &str, direction: ConversionDirection) -> Result<Option<ConversionRule>, DomainError> {
+(B[m[32m+    async fn find_rule(
+(B[m[32m+        &self,
+(B[m[32m+        namespace: &str,
+(B[m[32m+        path: &str,
+(B[m[32m+        direction: ConversionDirection,
+(B[m[32m+    ) -> Result<Option<ConversionRule>, DomainError> {
+(B[m         let dir_str = match direction {
+             ConversionDirection::ResourceToCurrency => "RESOURCE_TO_CURRENCY",
+             ConversionDirection::CurrencyToResource => "CURRENCY_TO_RESOURCE",
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:809:
+ 
+         match row {
+             Some(r) => {
+[31m-                let id: Uuid = r.try_get("id").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let dir_str: String = r.try_get("direction").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let resource_namespace: String = r.try_get("resource_namespace").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let resource_path: String = r.try_get("resource_path").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let currency_code: String = r.try_get("currency_code").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let unit_price_minor: i64 = r.try_get("unit_price_minor").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let min_amount: i64 = r.try_get("min_amount").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let max_amount: i64 = r.try_get("max_amount").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let enabled: bool = r.try_get("enabled").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let pricing_revision: i64 = r.try_get("pricing_revision").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let id: Uuid = r
+(B[m[32m+                    .try_get("id")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let dir_str: String = r
+(B[m[32m+                    .try_get("direction")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let resource_namespace: String = r
+(B[m[32m+                    .try_get("resource_namespace")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let resource_path: String = r
+(B[m[32m+                    .try_get("resource_path")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let currency_code: String = r
+(B[m[32m+                    .try_get("currency_code")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let unit_price_minor: i64 = r
+(B[m[32m+                    .try_get("unit_price_minor")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let min_amount: i64 = r
+(B[m[32m+                    .try_get("min_amount")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let max_amount: i64 = r
+(B[m[32m+                    .try_get("max_amount")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let enabled: bool = r
+(B[m[32m+                    .try_get("enabled")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let pricing_revision: i64 = r
+(B[m[32m+                    .try_get("pricing_revision")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+                 let direction = match dir_str.as_str() {
+                     "RESOURCE_TO_CURRENCY" => ConversionDirection::ResourceToCurrency,
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:843:
+         }
+     }
+ 
+[31m-    async fn save_reservation(&self, reservation: &ResourceConversionReservation) -> Result<(), DomainError> {
+(B[m[32m+    async fn save_reservation(
+(B[m[32m+        &self,
+(B[m[32m+        reservation: &ResourceConversionReservation,
+(B[m[32m+    ) -> Result<(), DomainError> {
+(B[m         let status_str = match reservation.status {
+             ReservationStatus::Prepared => "PREPARED",
+             ReservationStatus::Committed => "COMMITTED",
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:883:
+         Ok(())
+     }
+ 
+[31m-    async fn find_reservation_by_id(&self, id: ReservationId) -> Result<Option<ResourceConversionReservation>, DomainError> {
+(B[m[31m-        let row = sqlx::query(
+(B[m[31m-            "SELECT * FROM resource_conversion_reservations WHERE id = $1"
+(B[m[31m-        )
+(B[m[31m-        .bind(id.0)
+(B[m[31m-        .fetch_optional(&self.pool)
+(B[m[31m-        .await
+(B[m[31m-        .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+    async fn find_reservation_by_id(
+(B[m[32m+        &self,
+(B[m[32m+        id: ReservationId,
+(B[m[32m+    ) -> Result<Option<ResourceConversionReservation>, DomainError> {
+(B[m[32m+        let row = sqlx::query("SELECT * FROM resource_conversion_reservations WHERE id = $1")
+(B[m[32m+            .bind(id.0)
+(B[m[32m+            .fetch_optional(&self.pool)
+(B[m[32m+            .await
+(B[m[32m+            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+         match row {
+             Some(r) => {
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:897:
+[31m-                let id_val: Uuid = r.try_get("id").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let player_id_val: Uuid = r.try_get("player_id").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let status_str: String = r.try_get("status").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                
+(B[m[31m-                let resource_namespace: String = r.try_get("resource_namespace").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let resource_path: String = r.try_get("resource_path").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let resource_amount: i64 = r.try_get("resource_amount").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let currency_code: String = r.try_get("currency_code").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let unit_price_minor: i64 = r.try_get("unit_price_minor").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let total_price_minor: i64 = r.try_get("total_price_minor").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let pricing_revision: i64 = r.try_get("pricing_revision").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let expires_at: DateTime<Utc> = r.try_get("expires_at").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let id_val: Uuid = r
+(B[m[32m+                    .try_get("id")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let player_id_val: Uuid = r
+(B[m[32m+                    .try_get("player_id")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let status_str: String = r
+(B[m[32m+                    .try_get("status")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+[32m+                let resource_namespace: String = r
+(B[m[32m+                    .try_get("resource_namespace")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let resource_path: String = r
+(B[m[32m+                    .try_get("resource_path")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let resource_amount: i64 = r
+(B[m[32m+                    .try_get("resource_amount")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let currency_code: String = r
+(B[m[32m+                    .try_get("currency_code")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let unit_price_minor: i64 = r
+(B[m[32m+                    .try_get("unit_price_minor")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let total_price_minor: i64 = r
+(B[m[32m+                    .try_get("total_price_minor")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let pricing_revision: i64 = r
+(B[m[32m+                    .try_get("pricing_revision")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let expires_at: DateTime<Utc> = r
+(B[m[32m+                    .try_get("expires_at")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+
+(B[m                 let status = match status_str.as_str() {
+                     "PREPARED" => ReservationStatus::Prepared,
+                     "COMMITTED" => ReservationStatus::Committed,
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:942:
+         }
+     }
+ 
+[31m-    async fn abort_reservation(&self, id: ReservationId) -> Result<ResourceConversionReservation, DomainError> {
+(B[m[31m-        let mut tx = self.pool.begin().await.map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-
+(B[m[31m-        // Lock reservation FOR UPDATE
+(B[m[31m-        let row = sqlx::query("SELECT status FROM resource_conversion_reservations WHERE id = $1 FOR UPDATE")
+(B[m[31m-            .bind(id.0)
+(B[m[31m-            .fetch_optional(&mut *tx)
+(B[m[32m+    async fn abort_reservation(
+(B[m[32m+        &self,
+(B[m[32m+        id: ReservationId,
+(B[m[32m+    ) -> Result<ResourceConversionReservation, DomainError> {
+(B[m[32m+        let mut tx = self
+(B[m[32m+            .pool
+(B[m[32m+            .begin()
+(B[m             .await
+             .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:955:
+[32m+        // Lock reservation FOR UPDATE
+(B[m[32m+        let row = sqlx::query(
+(B[m[32m+            "SELECT status FROM resource_conversion_reservations WHERE id = $1 FOR UPDATE",
+(B[m[32m+        )
+(B[m[32m+        .bind(id.0)
+(B[m[32m+        .fetch_optional(&mut *tx)
+(B[m[32m+        .await
+(B[m[32m+        .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+
+(B[m         if row.is_none() {
+             return Err(DomainError::ConversionReservationNotFound(id.0));
+         }
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:958:
+ 
+         let r = row.unwrap();
+[31m-        let status_str: String = r.try_get("status").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+        let status_str: String = r
+(B[m[32m+            .try_get("status")
+(B[m[32m+            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+         if status_str == "COMMITTED" {
+[31m-            return Err(DomainError::ConversionReservationInvalidState("Cannot abort COMMITTED reservation".to_string()));
+(B[m[32m+            return Err(DomainError::ConversionReservationInvalidState(
+(B[m[32m+                "Cannot abort COMMITTED reservation".to_string(),
+(B[m[32m+            ));
+(B[m         }
+ 
+         if status_str == "PREPARED" {
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:967:
+[31m-            sqlx::query("UPDATE resource_conversion_reservations SET status = 'ABORTED' WHERE id = $1")
+(B[m[31m-                .bind(id.0)
+(B[m[31m-                .execute(&mut *tx)
+(B[m[31m-                .await
+(B[m[31m-                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            sqlx::query(
+(B[m[32m+                "UPDATE resource_conversion_reservations SET status = 'ABORTED' WHERE id = $1",
+(B[m[32m+            )
+(B[m[32m+            .bind(id.0)
+(B[m[32m+            .execute(&mut *tx)
+(B[m[32m+            .await
+(B[m[32m+            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m         }
+ 
+[31m-        tx.commit().await.map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-        
+(B[m[32m+        tx.commit()
+(B[m[32m+            .await
+(B[m[32m+            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+
+(B[m         let res = self.find_reservation_by_id(id).await?;
+         Ok(res.unwrap())
+     }
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:985:
+         initiating_server: &str,
+         correlation_id: Uuid,
+     ) -> Result<EconomyTransaction, DomainError> {
+[31m-        let mut tx = self.pool.begin().await
+(B[m[32m+        let mut tx = self
+(B[m[32m+            .pool
+(B[m[32m+            .begin()
+(B[m[32m+            .await
+(B[m             .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+ 
+         // 1. Check idempotency log
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:998:
+         .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+ 
+         if let Some(r) = row {
+[31m-            let op_type: String = r.try_get("operation_type").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-            let stored_fingerprint: String = r.try_get("request_fingerprint").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-            let payload: String = r.try_get("response_payload").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let op_type: String = r
+(B[m[32m+                .try_get("operation_type")
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let stored_fingerprint: String = r
+(B[m[32m+                .try_get("request_fingerprint")
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let payload: String = r
+(B[m[32m+                .try_get("response_payload")
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+             if op_type != "RESOURCE_CONVERSION" {
+                 return Err(DomainError::IdempotencyConflict {
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1007:
+                     request_id: idempotency_key,
+[31m-                    details: format!("Conflict: request was previously run as a different operation type: {}", op_type),
+(B[m[32m+                    details: format!(
+(B[m[32m+                        "Conflict: request was previously run as a different operation type: {}",
+(B[m[32m+                        op_type
+(B[m[32m+                    ),
+(B[m                 });
+             }
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1012:
+             if stored_fingerprint != fingerprint {
+                 return Err(DomainError::IdempotencyConflict {
+                     request_id: idempotency_key,
+[31m-                    details: "Conflict: duplicate request ID used with a different payload fingerprint".to_string(),
+(B[m[32m+                    details:
+(B[m[32m+                        "Conflict: duplicate request ID used with a different payload fingerprint"
+(B[m[32m+                            .to_string(),
+(B[m                 });
+             }
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1019:
+             let transaction: EconomyTransaction = serde_json::from_str(&payload)
+                 .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+[31m-            tx.commit().await.map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            tx.commit()
+(B[m[32m+                .await
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m             return Ok(transaction);
+         }
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1025:
+         // Lock reservation FOR UPDATE
+[31m-        let res_row = sqlx::query("SELECT * FROM resource_conversion_reservations WHERE id = $1 FOR UPDATE")
+(B[m[31m-            .bind(reservation_id.0)
+(B[m[31m-            .fetch_optional(&mut *tx)
+(B[m[31m-            .await
+(B[m[31m-            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+        let res_row =
+(B[m[32m+            sqlx::query("SELECT * FROM resource_conversion_reservations WHERE id = $1 FOR UPDATE")
+(B[m[32m+                .bind(reservation_id.0)
+(B[m[32m+                .fetch_optional(&mut *tx)
+(B[m[32m+                .await
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+         if res_row.is_none() {
+             return Err(DomainError::ConversionReservationNotFound(reservation_id.0));
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1034:
+         }
+ 
+         let res_row = res_row.unwrap();
+[31m-        let status_str: String = res_row.try_get("status").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-        let expires_at: DateTime<Utc> = res_row.try_get("expires_at").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-        let player_id: Uuid = res_row.try_get("player_id").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-        let amount_minor: i64 = res_row.try_get("total_price_minor").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-        let currency_code: String = res_row.try_get("currency_code").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-        let dir_str: String = res_row.try_get("direction").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+        let status_str: String = res_row
+(B[m[32m+            .try_get("status")
+(B[m[32m+            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+        let expires_at: DateTime<Utc> = res_row
+(B[m[32m+            .try_get("expires_at")
+(B[m[32m+            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+        let player_id: Uuid = res_row
+(B[m[32m+            .try_get("player_id")
+(B[m[32m+            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+        let amount_minor: i64 = res_row
+(B[m[32m+            .try_get("total_price_minor")
+(B[m[32m+            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+        let currency_code: String = res_row
+(B[m[32m+            .try_get("currency_code")
+(B[m[32m+            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+        let dir_str: String = res_row
+(B[m[32m+            .try_get("direction")
+(B[m[32m+            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+         if status_str != "PREPARED" {
+[31m-            return Err(DomainError::ConversionReservationInvalidState(format!("Cannot commit reservation in state {}", status_str)));
+(B[m[32m+            return Err(DomainError::ConversionReservationInvalidState(format!(
+(B[m[32m+                "Cannot commit reservation in state {}",
+(B[m[32m+                status_str
+(B[m[32m+            )));
+(B[m         }
+ 
+         if Utc::now() > expires_at {
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1049:
+             // Update to expired
+[31m-            sqlx::query("UPDATE resource_conversion_reservations SET status = 'EXPIRED' WHERE id = $1")
+(B[m[31m-                .bind(reservation_id.0)
+(B[m[31m-                .execute(&mut *tx)
+(B[m[32m+            sqlx::query(
+(B[m[32m+                "UPDATE resource_conversion_reservations SET status = 'EXPIRED' WHERE id = $1",
+(B[m[32m+            )
+(B[m[32m+            .bind(reservation_id.0)
+(B[m[32m+            .execute(&mut *tx)
+(B[m[32m+            .await
+(B[m[32m+            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            tx.commit()
+(B[m                 .await
+                 .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+[31m-            tx.commit().await.map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m             return Err(DomainError::ConversionReservationExpired(reservation_id.0));
+         }
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1069:
+             None => return Err(DomainError::PlayerNotFound(player_id)),
+         };
+ 
+[31m-        let wallet_id: Uuid = wallet_row.try_get("id").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-        let balance: i64 = wallet_row.try_get("balance").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-        let revision: i64 = wallet_row.try_get("revision").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+        let wallet_id: Uuid = wallet_row
+(B[m[32m+            .try_get("id")
+(B[m[32m+            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+        let balance: i64 = wallet_row
+(B[m[32m+            .try_get("balance")
+(B[m[32m+            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+        let revision: i64 = wallet_row
+(B[m[32m+            .try_get("revision")
+(B[m[32m+            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+         // Determine credit/debit
+         // ResourceToCurrency: we give player money (credit wallet)
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1080:
+         // In Prepare, amount_delta is just what Minecraft should do with resources.
+         // Let's use `dir_str` from the reservation.
+         let is_debit = dir_str == "CURRENCY_TO_RESOURCE";
+[31m-        
+(B[m[32m+
+(B[m         let new_balance = if is_debit {
+             if balance < amount_minor {
+                 return Err(DomainError::InsufficientFunds {
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1089:
+                     required: amount_minor,
+                 });
+             }
+[31m-            balance.checked_sub(amount_minor).ok_or(DomainError::ArithmeticOverflow)?
+(B[m[32m+            balance
+(B[m[32m+                .checked_sub(amount_minor)
+(B[m[32m+                .ok_or(DomainError::ArithmeticOverflow)?
+(B[m         } else {
+[31m-            balance.checked_add(amount_minor).ok_or(DomainError::ArithmeticOverflow)?
+(B[m[32m+            balance
+(B[m[32m+                .checked_add(amount_minor)
+(B[m[32m+                .ok_or(DomainError::ArithmeticOverflow)?
+(B[m         };
+ 
+         // Update wallet
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1109:
+         let entries = vec![
+             LedgerEntry {
+                 wallet_id: WalletId(wallet_id),
+[31m-                amount_delta: if is_debit { -amount_minor } else { amount_minor },
+(B[m[32m+                amount_delta: if is_debit {
+(B[m[32m+                    -amount_minor
+(B[m[32m+                } else {
+(B[m[32m+                    amount_minor
+(B[m[32m+                },
+(B[m             },
+             LedgerEntry {
+                 wallet_id: WalletId(system_wallet_id),
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1116:
+[31m-                amount_delta: if is_debit { amount_minor } else { -amount_minor },
+(B[m[32m+                amount_delta: if is_debit {
+(B[m[32m+                    amount_minor
+(B[m[32m+                } else {
+(B[m[32m+                    -amount_minor
+(B[m[32m+                },
+(B[m             },
+         ];
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1155:
+         }
+ 
+         // Update reservation to COMMITTED
+[31m-        sqlx::query("UPDATE resource_conversion_reservations SET status = 'COMMITTED' WHERE id = $1")
+(B[m[31m-            .bind(reservation_id.0)
+(B[m[31m-            .execute(&mut *tx)
+(B[m[31m-            .await
+(B[m[31m-            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+        sqlx::query(
+(B[m[32m+            "UPDATE resource_conversion_reservations SET status = 'COMMITTED' WHERE id = $1",
+(B[m[32m+        )
+(B[m[32m+        .bind(reservation_id.0)
+(B[m[32m+        .execute(&mut *tx)
+(B[m[32m+        .await
+(B[m[32m+        .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+         // Save idempotency record
+         let payload_json = serde_json::to_string(&transaction).unwrap();
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1181:
+             aggregate_id: transaction.id.0,
+             aggregate_version: 1,
+             payload: stg_domain::DomainEventPayload::MoneyTransferred {
+[31m-                from_wallet: if is_debit { wallet_id } else { system_wallet_id },
+(B[m[31m-                to_wallet: if is_debit { system_wallet_id } else { wallet_id },
+(B[m[32m+                from_wallet: if is_debit {
+(B[m[32m+                    wallet_id
+(B[m[32m+                } else {
+(B[m[32m+                    system_wallet_id
+(B[m[32m+                },
+(B[m[32m+                to_wallet: if is_debit {
+(B[m[32m+                    system_wallet_id
+(B[m[32m+                } else {
+(B[m[32m+                    wallet_id
+(B[m[32m+                },
+(B[m                 currency: currency_code,
+                 amount: amount_minor,
+             },
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1213:
+             .await
+             .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+ 
+[31m-        tx.commit().await.map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+        tx.commit()
+(B[m[32m+            .await
+(B[m[32m+            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+         Ok(transaction)
+     }
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1246:
+ 
+         match row {
+             Some(r) => {
+[31m-                let id_val: Uuid = r.try_get("id").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let node_type_str: String = r.try_get("node_type").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let server_id: String = r.try_get("server_id").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let region_id: String = r.try_get("region_id").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let display_name: String = r.try_get("display_name").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let enabled: bool = r.try_get("enabled").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let capacity_watts: i64 = r.try_get("capacity_watts").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let production_watts: i64 = r.try_get("production_watts").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let consumption_watts: i64 = r.try_get("consumption_watts").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let stored_wh: i64 = r.try_get("stored_wh").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let max_stored_wh: i64 = r.try_get("max_stored_wh").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let efficiency: f64 = r.try_get("efficiency").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let health: f64 = r.try_get("health").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let revision_val: i64 = r.try_get("revision").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-                let last_reported_at: DateTime<Utc> = r.try_get("last_reported_at").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let id_val: Uuid = r
+(B[m[32m+                    .try_get("id")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let node_type_str: String = r
+(B[m[32m+                    .try_get("node_type")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let server_id: String = r
+(B[m[32m+                    .try_get("server_id")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let region_id: String = r
+(B[m[32m+                    .try_get("region_id")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let display_name: String = r
+(B[m[32m+                    .try_get("display_name")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let enabled: bool = r
+(B[m[32m+                    .try_get("enabled")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let capacity_watts: i64 = r
+(B[m[32m+                    .try_get("capacity_watts")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let production_watts: i64 = r
+(B[m[32m+                    .try_get("production_watts")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let consumption_watts: i64 = r
+(B[m[32m+                    .try_get("consumption_watts")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let stored_wh: i64 = r
+(B[m[32m+                    .try_get("stored_wh")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let max_stored_wh: i64 = r
+(B[m[32m+                    .try_get("max_stored_wh")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let efficiency: f64 = r
+(B[m[32m+                    .try_get("efficiency")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let health: f64 = r
+(B[m[32m+                    .try_get("health")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let revision_val: i64 = r
+(B[m[32m+                    .try_get("revision")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+                let last_reported_at: DateTime<Utc> = r
+(B[m[32m+                    .try_get("last_reported_at")
+(B[m[32m+                    .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+                 let node_type = match node_type_str.as_str() {
+                     "PRODUCER" => EnergyNodeType::Producer,
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1267:
+                     "CONSUMER" => EnergyNodeType::Consumer,
+                     "STORAGE" => EnergyNodeType::Storage,
+                     "HYBRID" => EnergyNodeType::Hybrid,
+[31m-                    _ => return Err(DomainError::InternalStateError("Invalid energy node type in DB".to_string())),
+(B[m[32m+                    _ => {
+(B[m[32m+                        return Err(DomainError::InternalStateError(
+(B[m[32m+                            "Invalid energy node type in DB".to_string(),
+(B[m[32m+                        ))
+(B[m[32m+                    }
+(B[m                 };
+ 
+                 Ok(Some(EnergyNode {
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1306:
+ 
+         let mut nodes = Vec::new();
+         for r in rows {
+[31m-            let id_val: Uuid = r.try_get("id").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-            let node_type_str: String = r.try_get("node_type").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-            let server_id: String = r.try_get("server_id").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-            let region_id: String = r.try_get("region_id").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-            let display_name: String = r.try_get("display_name").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-            let enabled: bool = r.try_get("enabled").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-            let capacity_watts: i64 = r.try_get("capacity_watts").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-            let production_watts: i64 = r.try_get("production_watts").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-            let consumption_watts: i64 = r.try_get("consumption_watts").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-            let stored_wh: i64 = r.try_get("stored_wh").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-            let max_stored_wh: i64 = r.try_get("max_stored_wh").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-            let efficiency: f64 = r.try_get("efficiency").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-            let health: f64 = r.try_get("health").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-            let revision_val: i64 = r.try_get("revision").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-            let last_reported_at: DateTime<Utc> = r.try_get("last_reported_at").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let id_val: Uuid = r
+(B[m[32m+                .try_get("id")
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let node_type_str: String = r
+(B[m[32m+                .try_get("node_type")
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let server_id: String = r
+(B[m[32m+                .try_get("server_id")
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let region_id: String = r
+(B[m[32m+                .try_get("region_id")
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let display_name: String = r
+(B[m[32m+                .try_get("display_name")
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let enabled: bool = r
+(B[m[32m+                .try_get("enabled")
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let capacity_watts: i64 = r
+(B[m[32m+                .try_get("capacity_watts")
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let production_watts: i64 = r
+(B[m[32m+                .try_get("production_watts")
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let consumption_watts: i64 = r
+(B[m[32m+                .try_get("consumption_watts")
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let stored_wh: i64 = r
+(B[m[32m+                .try_get("stored_wh")
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let max_stored_wh: i64 = r
+(B[m[32m+                .try_get("max_stored_wh")
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let efficiency: f64 = r
+(B[m[32m+                .try_get("efficiency")
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let health: f64 = r
+(B[m[32m+                .try_get("health")
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let revision_val: i64 = r
+(B[m[32m+                .try_get("revision")
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let last_reported_at: DateTime<Utc> = r
+(B[m[32m+                .try_get("last_reported_at")
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+             let node_type = match node_type_str.as_str() {
+                 "PRODUCER" => EnergyNodeType::Producer,
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1327:
+                 "CONSUMER" => EnergyNodeType::Consumer,
+                 "STORAGE" => EnergyNodeType::Storage,
+                 "HYBRID" => EnergyNodeType::Hybrid,
+[31m-                _ => return Err(DomainError::InternalStateError("Invalid energy node type in DB".to_string())),
+(B[m[32m+                _ => {
+(B[m[32m+                    return Err(DomainError::InternalStateError(
+(B[m[32m+                        "Invalid energy node type in DB".to_string(),
+(B[m[32m+                    ))
+(B[m[32m+                }
+(B[m             };
+ 
+             nodes.push(EnergyNode {
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1408:
+         .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+ 
+         if res.rows_affected() == 0 {
+[31m-            return Err(DomainError::RevisionConflict("EnergyNode".to_string(), node.revision, node.revision));
+(B[m[32m+            return Err(DomainError::RevisionConflict(
+(B[m[32m+                "EnergyNode".to_string(),
+(B[m[32m+                node.revision,
+(B[m[32m+                node.revision,
+(B[m[32m+            ));
+(B[m         }
+ 
+         Ok(())
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1423:
+     }
+ }
+ 
+[31m-pub struct LoggingQueuePublisher {
+(B[m[31m-}
+(B[m[32m+pub struct LoggingQueuePublisher {}
+(B[m 
+ impl LoggingQueuePublisher {
+     pub fn new() -> Self {
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1460:
+     /// Run a single polling tick. Returns the number of events processed.
+     pub async fn process_next_batch(&self, batch_size: i32) -> Result<usize, DomainError> {
+         // 1. Start a transaction to select and lock the available pending outbox records
+[31m-        let mut tx = self.pool.begin().await
+(B[m[32m+        let mut tx = self
+(B[m[32m+            .pool
+(B[m[32m+            .begin()
+(B[m[32m+            .await
+(B[m             .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+ 
+         let rows = sqlx::query(
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1471:
+             ORDER BY created_at ASC
+             LIMIT $2
+             FOR UPDATE SKIP LOCKED
+[31m-            "#
+(B[m[32m+            "#,
+(B[m         )
+         .bind(Utc::now())
+         .bind(batch_size as i64)
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1480:
+         .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+ 
+         if rows.is_empty() {
+[31m-            tx.commit().await.map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            tx.commit()
+(B[m[32m+                .await
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m             return Ok(0);
+         }
+ 
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1488:
+         let mut events_to_publish = Vec::new();
+ 
+         for row in &rows {
+[31m-            let id: Uuid = row.try_get("id").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-            let aggregate_type: String = row.try_get("aggregate_type").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-            let aggregate_id: Uuid = row.try_get("aggregate_id").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-            let payload_json: serde_json::Value = row.try_get("payload_json").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[31m-            let attempt_count: i32 = row.try_get("attempt_count").map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let id: Uuid = row
+(B[m[32m+                .try_get("id")
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let aggregate_type: String = row
+(B[m[32m+                .try_get("aggregate_type")
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let aggregate_id: Uuid = row
+(B[m[32m+                .try_get("aggregate_id")
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let payload_json: serde_json::Value = row
+(B[m[32m+                .try_get("payload_json")
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+            let attempt_count: i32 = row
+(B[m[32m+                .try_get("attempt_count")
+(B[m[32m+                .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+             locked_ids.push(id);
+[31m-            events_to_publish.push((id, aggregate_type, aggregate_id, payload_json, attempt_count));
+(B[m[32m+            events_to_publish.push((
+(B[m[32m+                id,
+(B[m[32m+                aggregate_type,
+(B[m[32m+                aggregate_id,
+(B[m[32m+                payload_json,
+(B[m[32m+                attempt_count,
+(B[m[32m+            ));
+(B[m         }
+ 
+         // Atomically claim ownership (mark as PROCESSING)
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1504:
+             UPDATE outbox_events
+             SET status = 'PROCESSING'
+             WHERE id = ANY($1)
+[31m-            "#
+(B[m[32m+            "#,
+(B[m         )
+         .bind(&locked_ids)
+         .execute(&mut *tx)
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1512:
+         .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+ 
+         // Commit claim transaction so that other workers don't block
+[31m-        tx.commit().await.map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m[32m+        tx.commit()
+(B[m[32m+            .await
+(B[m[32m+            .map_err(|e| DomainError::InternalStateError(e.to_string()))?;
+(B[m 
+         // 2. Publish outside of any PostgreSQL transaction
+         for (id, _aggregate_type, _aggregate_id, payload_json, attempt_count) in events_to_publish {
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1528:
+                                 UPDATE outbox_events
+                                 SET status = 'PUBLISHED'
+                                 WHERE id = $1
+[31m-                                "#
+(B[m[32m+                                "#,
+(B[m                             )
+                             .bind(id)
+                             .execute(&self.pool)
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1535:
+[31m-                            .await {
+(B[m[31m-                                eprintln!("Failed to update outbox status to PUBLISHED for event {}: {}", id, e);
+(B[m[32m+                            .await
+(B[m[32m+                            {
+(B[m[32m+                                eprintln!(
+(B[m[32m+                                    "Failed to update outbox status to PUBLISHED for event {}: {}",
+(B[m[32m+                                    id, e
+(B[m[32m+                                );
+(B[m                             }
+                         }
+                         Err(pub_err) => {
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1542:
+                             let next_attempt = attempt_count + 1;
+                             // exponential backoff capped at 1 hour (3600 seconds)
+                             let backoff_secs = 2_u64.pow(next_attempt as u32).min(3600);
+[31m-                            let available_at = Utc::now() + chrono::Duration::seconds(backoff_secs as i64);
+(B[m[32m+                            let available_at =
+(B[m[32m+                                Utc::now() + chrono::Duration::seconds(backoff_secs as i64);
+(B[m 
+                             if let Err(e) = sqlx::query(
+                                 r#"
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1552:
+                                     last_error = $2,
+                                     available_at = $3
+                                 WHERE id = $4
+[31m-                                "#
+(B[m[32m+                                "#,
+(B[m                             )
+                             .bind(next_attempt)
+                             .bind(err_str)
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1559:
+                             .bind(available_at)
+                             .bind(id)
+                             .execute(&self.pool)
+[31m-                            .await {
+(B[m[31m-                                eprintln!("Failed to update outbox status to FAILED for event {}: {}", id, e);
+(B[m[32m+                            .await
+(B[m[32m+                            {
+(B[m[32m+                                eprintln!(
+(B[m[32m+                                    "Failed to update outbox status to FAILED for event {}: {}",
+(B[m[32m+                                    id, e
+(B[m[32m+                                );
+(B[m                             }
+                         }
+                     }
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1567:
+                 }
+                 Err(serde_err) => {
+[31m-                    eprintln!("Failed to deserialize outbox payload for {}: {}", id, serde_err);
+(B[m[32m+                    eprintln!(
+(B[m[32m+                        "Failed to deserialize outbox payload for {}: {}",
+(B[m[32m+                        id, serde_err
+(B[m[32m+                    );
+(B[m                     let err_str = format!("Unrecoverable deserialization error: {}", serde_err);
+                     let _ = sqlx::query(
+                         r#"
+Diff in /home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-infrastructure/src/lib.rs:1576:
+                             last_error = $1,
+                             available_at = $2
+                         WHERE id = $3
+[31m-                        "#
+(B[m[32m+                        "#,
+(B[m                     )
+                     .bind(err_str)
+                     .bind(Utc::now() + chrono::Duration::hours(24))
+fmt exit code: 1
+[1m[92m   Compiling[0m sqlx-macros-core v0.7.4
+[1m[92m    Checking[0m hyper-timeout v0.4.1
+[1m[92m    Checking[0m axum v0.6.20
+[1m[92m   Compiling[0m stg-proto v0.1.0 (/home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-proto)
+[1m[33mwarning[0m[1m: unused import: `std::collections::HashMap`[0m
+ [1m[94m--> [0mcrates/stg-application/src/lib.rs:4:5
+  [1m[94m|[0m
+[1m[94m4[0m [1m[94m|[0m use std::collections::HashMap;
+  [1m[94m|[0m     [1m[33m^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [1m[94m|[0m
+  [1m[94m= [0m[1mnote[0m: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+[1m[33mwarning[0m[1m: unused imports: `EconomyTransactionStatus`, `EconomyTransactionType`, `EnergyMode`, `LedgerEntry`, and `TransitionStatus`[0m
+  [1m[94m--> [0mcrates/stg-application/src/lib.rs:7:25
+   [1m[94m|[0m
+[1m[94m 7[0m [1m[94m|[0m     EconomyTransaction, EconomyTransactionStatus, EconomyTransactionType, EnergyMode, EnergyNode,
+   [1m[94m|[0m                         [1m[33m^^^^^^^^^^^^^^^^^^^^^^^^[0m  [1m[33m^^^^^^^^^^^^^^^^^^^^^^[0m  [1m[33m^^^^^^^^^^[0m
+[1m[94m 8[0m [1m[94m|[0m     EnergyState, LedgerEntry, Money, Player, PlayerId, PlayerStatus, PlayerTransition,
+   [1m[94m|[0m                  [1m[33m^^^^^^^^^^^[0m
+[1m[94m 9[0m [1m[94m|[0m     ReservationId, ReservationStatus, ResourceConversionReservation, ResourceRef, TransactionId, TransitionId,
+[1m[94m10[0m [1m[94m|[0m     TransitionStatus, Wallet, WalletId, ConversionRule,
+   [1m[94m|[0m     [1m[33m^^^^^^^^^^^^^^^^[0m
+
+[1m[33mwarning[0m[1m: unused variable: `initiating_server`[0m
+   [1m[94m--> [0mcrates/stg-application/src/lib.rs:256:9
+    [1m[94m|[0m
+[1m[94m256[0m [1m[94m|[0m         initiating_server: &str,
+    [1m[94m|[0m         [1m[33m^^^^^^^^^^^^^^^^^[0m [1m[33mhelp: if this is intentional, prefix it with an underscore: `_initiating_server`[0m
+    [1m[94m|[0m
+    [1m[94m= [0m[1mnote[0m: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+[1m[33mwarning[0m[1m: unused variable: `correlation_id`[0m
+   [1m[94m--> [0mcrates/stg-application/src/lib.rs:257:9
+    [1m[94m|[0m
+[1m[94m257[0m [1m[94m|[0m         correlation_id: Uuid,
+    [1m[94m|[0m         [1m[33m^^^^^^^^^^^^^^[0m [1m[33mhelp: if this is intentional, prefix it with an underscore: `_correlation_id`[0m
+
+[1m[33mwarning[0m[1m: fields `player_repo`, `wallet_repo`, `event_repo`, and `queue_pub` are never read[0m
+   [1m[94m--> [0mcrates/stg-application/src/lib.rs:400:5
+    [1m[94m|[0m
+[1m[94m399[0m [1m[94m|[0m pub struct EconomyService {
+    [1m[94m|[0m            [1m[94m--------------[0m [1m[94mfields in this struct[0m
+[1m[94m400[0m [1m[94m|[0m     player_repo: Box<dyn PlayerRepository>,
+    [1m[94m|[0m     [1m[33m^^^^^^^^^^^[0m
+[1m[94m401[0m [1m[94m|[0m     wallet_repo: Box<dyn WalletRepository>,
+    [1m[94m|[0m     [1m[33m^^^^^^^^^^^[0m
+[1m[94m402[0m [1m[94m|[0m     tx_repo: Box<dyn TransactionRepository>,
+[1m[94m403[0m [1m[94m|[0m     event_repo: Box<dyn EventLogRepository>,
+    [1m[94m|[0m     [1m[33m^^^^^^^^^^[0m
+[1m[94m404[0m [1m[94m|[0m     queue_pub: Box<dyn QueuePublisher>,
+    [1m[94m|[0m     [1m[33m^^^^^^^^^[0m
+    [1m[94m|[0m
+    [1m[94m= [0m[1mnote[0m: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+[1m[33mwarning[0m: `stg-application` (lib) generated 5 warnings (run `cargo fix --lib -p stg-application` to apply 4 suggestions)
+[1m[91merror[0m: failed to run custom build command for `stg-proto v0.1.0 (/home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-proto)`
+
+Caused by:
+  process didn't exit successfully: `/home/artchersh/Nor/stg-ashland-core-backend/stg-backend/target/debug/build/stg-proto-de2cb4a50ed643fb/build-script-build` (exit status: 1)
+  --- stdout
+  cargo:rerun-if-changed=proto/stg_core.proto
+  cargo:rerun-if-changed=proto
+
+  --- stderr
+  Error: Custom { kind: NotFound, error: "Could not find `protoc`. If `protoc` is installed, try setting the `PROTOC` environment variable to the path of the `protoc` binary. To install it on Debian, run `apt-get install protobuf-compiler`. It is also available at https://github.com/protocolbuffers/protobuf/releases  For more information: https://docs.rs/prost-build/#sourcing-protoc" }
+[1m[33mwarning[0m: build failed, waiting for other jobs to finish...
+check exit code: 101
+[1m[92m   Compiling[0m cfg-if v1.0.4
+[1m[92m   Compiling[0m bytes v1.12.1
+[1m[92m   Compiling[0m memchr v2.8.3
+[1m[92m   Compiling[0m pin-project-lite v0.2.17
+[1m[92m   Compiling[0m once_cell v1.21.4
+[1m[92m   Compiling[0m futures-core v0.3.32
+[1m[92m   Compiling[0m itoa v1.0.18
+[1m[92m   Compiling[0m equivalent v1.0.2
+[1m[92m   Compiling[0m log v0.4.33
+[1m[92m   Compiling[0m libc v0.2.186
+[1m[92m   Compiling[0m serde_core v1.0.228
+[1m[92m   Compiling[0m hashbrown v0.17.1
+[1m[92m   Compiling[0m zerocopy v0.8.54
+[1m[92m   Compiling[0m stable_deref_trait v1.2.1
+[1m[92m   Compiling[0m zerofrom v0.1.8
+[1m[92m   Compiling[0m futures-task v0.3.32
+[1m[92m   Compiling[0m futures-io v0.3.32
+[1m[92m   Compiling[0m typenum v1.20.1
+[1m[92m   Compiling[0m num-traits v0.2.19
+[1m[92m   Compiling[0m futures-sink v0.3.32
+[1m[92m   Compiling[0m yoke v0.8.3
+[1m[92m   Compiling[0m iana-time-zone v0.1.65
+[1m[92m   Compiling[0m subtle v2.6.1
+[1m[92m   Compiling[0m zmij v1.0.23
+[1m[92m   Compiling[0m tracing-core v0.1.36
+[1m[92m   Compiling[0m writeable v0.6.3
+[1m[92m   Compiling[0m slab v0.4.12
+[1m[92m   Compiling[0m litemap v0.8.2
+[1m[92m   Compiling[0m smallvec v1.15.2
+[1m[92m   Compiling[0m zerovec v0.11.6
+[1m[92m   Compiling[0m percent-encoding v2.3.2
+[1m[92m   Compiling[0m zerotrie v0.2.4
+[1m[92m   Compiling[0m thiserror v1.0.69
+[1m[92m   Compiling[0m utf8_iter v1.0.4
+[1m[92m   Compiling[0m base64 v0.21.7
+[1m[92m   Compiling[0m icu_normalizer_data v2.2.0
+[1m[92m   Compiling[0m icu_properties_data v2.2.0
+[1m[92m   Compiling[0m futures-util v0.3.32
+[1m[92m   Compiling[0m cpufeatures v0.2.17
+[1m[92m   Compiling[0m tracing v0.1.44
+[1m[92m   Compiling[0m untrusted v0.9.0
+[1m[92m   Compiling[0m futures-channel v0.3.32
+[1m[92m   Compiling[0m indexmap v2.14.0
+[1m[92m   Compiling[0m scopeguard v1.2.0
+[1m[92m   Compiling[0m minimal-lexical v0.2.1
+[1m[92m   Compiling[0m lock_api v0.4.14
+[1m[92m   Compiling[0m allocator-api2 v0.2.21
+[1m[92m   Compiling[0m crossbeam-utils v0.8.22
+[1m[92m   Compiling[0m form_urlencoded v1.2.2
+[1m[92m   Compiling[0m fnv v1.0.7
+[1m[92m   Compiling[0m tinystr v0.8.3
+[1m[92m   Compiling[0m potential_utf v0.1.5
+[1m[92m   Compiling[0m nom v7.1.3
+[1m[92m   Compiling[0m unicode_categories v0.1.1
+[1m[92m   Compiling[0m generic-array v0.14.7
+[1m[92m   Compiling[0m icu_collections v2.2.0
+[1m[92m   Compiling[0m crc-catalog v2.5.0
+[1m[92m   Compiling[0m tinyvec_macros v0.1.1
+[1m[92m   Compiling[0m atoi v2.0.0
+[1m[92m   Compiling[0m tinyvec v1.12.0
+[1m[92m   Compiling[0m http v0.2.12
+[1m[92m   Compiling[0m rustls-pemfile v1.0.4
+[1m[92m   Compiling[0m icu_locale_core v2.2.0
+[1m[92m   Compiling[0m crc v3.4.0
+[1m[92m   Compiling[0m byteorder v1.5.0
+[1m[92m   Compiling[0m hex v0.4.3
+[1m[92m   Compiling[0m socket2 v0.6.5
+[1m[92m   Compiling[0m mio v1.2.2
+[1m[92m   Compiling[0m getrandom v0.2.17
+[1m[92m   Compiling[0m getrandom v0.4.3
+[1m[92m   Compiling[0m getrandom v0.3.4
+[1m[92m   Compiling[0m parking_lot_core v0.9.12
+[1m[92m   Compiling[0m crossbeam-queue v0.3.13
+[1m[92m   Compiling[0m webpki-roots v0.25.4
+[1m[92m   Compiling[0m rand_core v0.6.4
+[1m[92m   Compiling[0m tempfile v3.27.0
+[1m[92m   Compiling[0m ring v0.17.14
+[1m[92m   Compiling[0m event-listener v2.5.3
+[1m[92m   Compiling[0m unicode-normalization v0.1.25
+[1m[92m   Compiling[0m unicode-properties v0.1.4
+[1m[92m   Compiling[0m block-buffer v0.10.4
+[1m[92m   Compiling[0m tokio v1.52.3
+[1m[92m   Compiling[0m crypto-common v0.1.7
+[1m[92m   Compiling[0m parking_lot v0.12.5
+[1m[92m   Compiling[0m tower-service v0.3.3
+[1m[92m   Compiling[0m digest v0.10.7
+[1m[92m   Compiling[0m unicode-bidi v0.3.18
+[1m[92m   Compiling[0m http-body v0.4.6
+[1m[92m   Compiling[0m sha2 v0.10.9
+[1m[92m   Compiling[0m futures-intrusive v0.5.0
+[1m[92m   Compiling[0m icu_provider v2.2.0
+[1m[92m   Compiling[0m hmac v0.12.1
+[1m[92m   Compiling[0m hkdf v0.12.4
+[1m[92m   Compiling[0m stringprep v0.1.5
+[1m[92m   Compiling[0m icu_normalizer v2.2.0
+[1m[92m   Compiling[0m icu_properties v2.2.0
+[1m[92m   Compiling[0m md-5 v0.10.6
+[1m[92m   Compiling[0m chrono v0.4.45
+[1m[92m   Compiling[0m home v0.5.12
+[1m[92m   Compiling[0m dotenvy v0.15.7
+[1m[92m   Compiling[0m try-lock v0.2.5
+[1m[92m   Compiling[0m whoami v1.6.1
+[1m[92m   Compiling[0m petgraph v0.6.5
+[1m[92m   Compiling[0m want v0.3.1
+[1m[92m   Compiling[0m serde v1.0.228
+[1m[92m   Compiling[0m serde_json v1.0.150
+[1m[92m   Compiling[0m uuid v1.23.5
+[1m[92m   Compiling[0m sqlformat v0.2.6
+[1m[92m   Compiling[0m httparse v1.10.1
+[1m[92m   Compiling[0m socket2 v0.5.10
+[1m[92m   Compiling[0m sct v0.7.1
+[1m[92m   Compiling[0m rustls-webpki v0.101.7
+[1m[92m   Compiling[0m tower-layer v0.3.3
+[1m[92m   Compiling[0m hashbrown v0.12.3
+[1m[92m   Compiling[0m either v1.16.0
+[1m[92m   Compiling[0m httpdate v1.0.3
+[1m[92m   Compiling[0m pin-project v1.1.13
+[1m[92m   Compiling[0m idna_adapter v1.2.2
+[1m[92m   Compiling[0m idna v1.1.0
+[1m[92m   Compiling[0m itertools v0.12.1
+[1m[92m   Compiling[0m rustls v0.21.12
+[1m[92m   Compiling[0m indexmap v1.9.3
+[1m[92m   Compiling[0m mime v0.3.17
+[1m[92m   Compiling[0m url v2.5.8
+[1m[92m   Compiling[0m axum-core v0.3.4
+[1m[92m   Compiling[0m bitflags v2.13.0
+[1m[92m   Compiling[0m ppv-lite86 v0.2.21
+[1m[92m   Compiling[0m ahash v0.8.12
+[1m[92m   Compiling[0m bitflags v1.3.2
+[1m[92m   Compiling[0m matchit v0.7.3
+[1m[92m   Compiling[0m sync_wrapper v0.1.2
+[1m[92m   Compiling[0m async-stream v0.3.6
+[1m[92m   Compiling[0m hashbrown v0.14.5
+[1m[92m   Compiling[0m rand_chacha v0.3.1
+[1m[92m   Compiling[0m stg-domain v0.1.0 (/home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-domain)
+[1m[92m   Compiling[0m rand v0.8.7
+[1m[92m   Compiling[0m hashlink v0.8.4
+[1m[92m   Compiling[0m prost-derive v0.12.6
+[1m[92m   Compiling[0m stg-application v0.1.0 (/home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-application)
+[1m[33mwarning[0m[1m: unused import: `std::collections::HashMap`[0m
+ [1m[94m--> [0mcrates/stg-application/src/lib.rs:4:5
+  [1m[94m|[0m
+[1m[94m4[0m [1m[94m|[0m use std::collections::HashMap;
+  [1m[94m|[0m     [1m[33m^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [1m[94m|[0m
+  [1m[94m= [0m[1mnote[0m: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+[1m[33mwarning[0m[1m: unused imports: `EconomyTransactionStatus`, `EconomyTransactionType`, `EnergyMode`, `LedgerEntry`, and `TransitionStatus`[0m
+  [1m[94m--> [0mcrates/stg-application/src/lib.rs:7:25
+   [1m[94m|[0m
+[1m[94m 7[0m [1m[94m|[0m     EconomyTransaction, EconomyTransactionStatus, EconomyTransactionType, EnergyMode, EnergyNode,
+   [1m[94m|[0m                         [1m[33m^^^^^^^^^^^^^^^^^^^^^^^^[0m  [1m[33m^^^^^^^^^^^^^^^^^^^^^^[0m  [1m[33m^^^^^^^^^^[0m
+[1m[94m 8[0m [1m[94m|[0m     EnergyState, LedgerEntry, Money, Player, PlayerId, PlayerStatus, PlayerTransition,
+   [1m[94m|[0m                  [1m[33m^^^^^^^^^^^[0m
+[1m[94m 9[0m [1m[94m|[0m     ReservationId, ReservationStatus, ResourceConversionReservation, ResourceRef, TransactionId, TransitionId,
+[1m[94m10[0m [1m[94m|[0m     TransitionStatus, Wallet, WalletId, ConversionRule,
+   [1m[94m|[0m     [1m[33m^^^^^^^^^^^^^^^^[0m
+
+[1m[33mwarning[0m[1m: unused variable: `initiating_server`[0m
+   [1m[94m--> [0mcrates/stg-application/src/lib.rs:256:9
+    [1m[94m|[0m
+[1m[94m256[0m [1m[94m|[0m         initiating_server: &str,
+    [1m[94m|[0m         [1m[33m^^^^^^^^^^^^^^^^^[0m [1m[33mhelp: if this is intentional, prefix it with an underscore: `_initiating_server`[0m
+    [1m[94m|[0m
+    [1m[94m= [0m[1mnote[0m: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+[1m[33mwarning[0m[1m: unused variable: `correlation_id`[0m
+   [1m[94m--> [0mcrates/stg-application/src/lib.rs:257:9
+    [1m[94m|[0m
+[1m[94m257[0m [1m[94m|[0m         correlation_id: Uuid,
+    [1m[94m|[0m         [1m[33m^^^^^^^^^^^^^^[0m [1m[33mhelp: if this is intentional, prefix it with an underscore: `_correlation_id`[0m
+
+[1m[33mwarning[0m[1m: fields `player_repo`, `wallet_repo`, `event_repo`, and `queue_pub` are never read[0m
+   [1m[94m--> [0mcrates/stg-application/src/lib.rs:400:5
+    [1m[94m|[0m
+[1m[94m399[0m [1m[94m|[0m pub struct EconomyService {
+    [1m[94m|[0m            [1m[94m--------------[0m [1m[94mfields in this struct[0m
+[1m[94m400[0m [1m[94m|[0m     player_repo: Box<dyn PlayerRepository>,
+    [1m[94m|[0m     [1m[33m^^^^^^^^^^^[0m
+[1m[94m401[0m [1m[94m|[0m     wallet_repo: Box<dyn WalletRepository>,
+    [1m[94m|[0m     [1m[33m^^^^^^^^^^^[0m
+[1m[94m402[0m [1m[94m|[0m     tx_repo: Box<dyn TransactionRepository>,
+[1m[94m403[0m [1m[94m|[0m     event_repo: Box<dyn EventLogRepository>,
+    [1m[94m|[0m     [1m[33m^^^^^^^^^^[0m
+[1m[94m404[0m [1m[94m|[0m     queue_pub: Box<dyn QueuePublisher>,
+    [1m[94m|[0m     [1m[33m^^^^^^^^^[0m
+    [1m[94m|[0m
+    [1m[94m= [0m[1mnote[0m: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+[1m[92m   Compiling[0m tokio-stream v0.1.18
+[1m[92m   Compiling[0m tokio-util v0.7.18
+[1m[92m   Compiling[0m tokio-io-timeout v1.2.1
+[1m[33mwarning[0m: `stg-application` (lib test) generated 5 warnings (5 duplicates)
+[1m[92m   Compiling[0m prost v0.12.6
+[1m[33mwarning[0m: `stg-application` (lib) generated 5 warnings (run `cargo fix --lib -p stg-application` to apply 4 suggestions)
+[1m[92m   Compiling[0m prost-types v0.12.6
+[1m[92m   Compiling[0m sqlx-core v0.7.4
+[1m[92m   Compiling[0m h2 v0.3.27
+[1m[92m   Compiling[0m tower v0.4.13
+[1m[92m   Compiling[0m prost-build v0.12.6
+[1m[92m   Compiling[0m tonic-build v0.11.0
+[1m[92m   Compiling[0m sqlx-postgres v0.7.4
+[1m[92m   Compiling[0m stg-proto v0.1.0 (/home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-proto)
+[1m[91merror[0m: failed to run custom build command for `stg-proto v0.1.0 (/home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-proto)`
+
+Caused by:
+  process didn't exit successfully: `/home/artchersh/Nor/stg-ashland-core-backend/stg-backend/target/debug/build/stg-proto-3ab0fcfe18a99c72/build-script-build` (exit status: 1)
+  --- stdout
+  cargo:rerun-if-changed=proto/stg_core.proto
+  cargo:rerun-if-changed=proto
+
+  --- stderr
+  Error: Custom { kind: NotFound, error: "Could not find `protoc`. If `protoc` is installed, try setting the `PROTOC` environment variable to the path of the `protoc` binary. To install it on Debian, run `apt-get install protobuf-compiler`. It is also available at https://github.com/protocolbuffers/protobuf/releases  For more information: https://docs.rs/prost-build/#sourcing-protoc" }
+[1m[33mwarning[0m: build failed, waiting for other jobs to finish...
+test exit code: 101
+[1m[92m    Checking[0m stg-domain v0.1.0 (/home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-domain)
+[1m[92m   Compiling[0m sqlx-macros v0.7.4
+[1m[92m   Compiling[0m stg-proto v0.1.0 (/home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-proto)
+[1m[92m    Checking[0m tonic v0.11.0
+[1m[91merror[0m: failed to run custom build command for `stg-proto v0.1.0 (/home/artchersh/Nor/stg-ashland-core-backend/stg-backend/crates/stg-proto)`
+
+Caused by:
+  process didn't exit successfully: `/home/artchersh/Nor/stg-ashland-core-backend/stg-backend/target/debug/build/stg-proto-168c9e99d53334d5/build-script-build` (exit status: 1)
+  --- stdout
+  cargo:rerun-if-changed=proto/stg_core.proto
+  cargo:rerun-if-changed=proto
+
+  --- stderr
+  Error: Custom { kind: NotFound, error: "Could not find `protoc`. If `protoc` is installed, try setting the `PROTOC` environment variable to the path of the `protoc` binary. To install it on Debian, run `apt-get install protobuf-compiler`. It is also available at https://github.com/protocolbuffers/protobuf/releases  For more information: https://docs.rs/prost-build/#sourcing-protoc" }
+[1m[33mwarning[0m: build failed, waiting for other jobs to finish...
+clippy exit code: 101
+--- Phase 3: Source Code Inventory ---
+13
+1
+0
+crates/stg-domain/src/lib.rs:453:            _ => panic!("Expected InsufficientFunds error"),
+crates/stg-domain/src/lib.rs:508:            _ => panic!("Expected LedgerImbalance error"),
+crates/stg-infrastructure/src/lib.rs:959:        let r = row.unwrap();
+crates/stg-infrastructure/src/lib.rs:977:        Ok(res.unwrap())
+crates/stg-infrastructure/src/lib.rs:1036:        let res_row = res_row.unwrap();
+crates/stg-infrastructure/src/lib.rs:1165:        let payload_json = serde_json::to_string(&transaction).unwrap();
+crates/stg-infrastructure/src/lib.rs:1193:        let event_json = serde_json::to_value(&event.payload).unwrap();
+crates/stg-server/src/main.rs:44:        Err(tonic::Status::unimplemented("Connect is fully defined in proto, mock streaming active in panel"))
+crates/stg-server/src/main.rs:106:        Err(tonic::Status::unimplemented("GetPlayerSnapshot"))
+crates/stg-server/src/main.rs:113:        Err(tonic::Status::unimplemented("GetWorldSnapshot"))
+crates/stg-server/src/main.rs:120:        Err(tonic::Status::unimplemented("GetEconomyState"))
+crates/stg-server/src/main.rs:193:        Err(tonic::Status::unimplemented("PrepareResourceConversion"))
+crates/stg-server/src/main.rs:200:        Err(tonic::Status::unimplemented("CommitResourceConversion"))
+crates/stg-server/src/main.rs:207:        Err(tonic::Status::unimplemented("AbortResourceConversion"))
+crates/stg-server/src/main.rs:214:        Err(tonic::Status::unimplemented("RegisterEnergyNode"))
+crates/stg-server/src/main.rs:221:        Err(tonic::Status::unimplemented("ReportEnergyObservation"))
+crates/stg-server/src/main.rs:228:        Err(tonic::Status::unimplemented("GetEnergyState"))
+crates/stg-server/src/main.rs:235:        Err(tonic::Status::unimplemented("BeginTransition"))
+crates/stg-server/src/main.rs:242:        Err(tonic::Status::unimplemented("ClaimTransition"))
+crates/stg-server/src/main.rs:249:        Err(tonic::Status::unimplemented("CommitTransition"))
+crates/stg-server/src/main.rs:256:        Err(tonic::Status::unimplemented("AbortTransition"))
+crates/stg-api/src/grpc/handlers.rs:49:        Err(Status::unimplemented("Connect realtime streaming not implemented"))
+crates/stg-api/src/grpc/handlers.rs:465:        Err(Status::unimplemented("Not implemented"))
+crates/stg-api/src/grpc/handlers.rs:472:        Err(Status::unimplemented("Not implemented"))
+crates/stg-api/src/grpc/handlers.rs:479:        Err(Status::unimplemented("Not implemented"))
+crates/stg-api/src/grpc/handlers.rs:486:        Err(Status::unimplemented("Not implemented"))
+--- Phase 5: Database and Migrations ---
+--- Phase 6: Economy Trace ---
+crates/stg-application/src/lib.rs:    pub async fn transfer_money(
+crates/stg-server/src/main.rs:        match self.economy_service.transfer_money(
+crates/stg-api/src/grpc/handlers.rs:    async fn transfer_money(
+crates/stg-api/src/grpc/handlers.rs:        let tx = self.economy_service.transfer_money(
+--- Phase 7/8: Idempotency & Energy ---
+crates/stg-application/src/lib.rs:47:    /// ensuring proper idempotency check with fingerprint, deterministic locking order,
+crates/stg-application/src/lib.rs:51:        idempotency_key: Uuid,
+crates/stg-application/src/lib.rs:102:        idempotency_key: Uuid,
+crates/stg-application/src/lib.rs:255:        idempotency_key: Uuid,
+crates/stg-application/src/lib.rs:284:        // Let's create a deterministic reservation ID based on idempotency_key to prevent duplicates.
+crates/stg-application/src/lib.rs:285:        let reservation_id = ReservationId(idempotency_key);
+crates/stg-application/src/lib.rs:344:        idempotency_key: Uuid,
+crates/stg-application/src/lib.rs:352:            idempotency_key,
+crates/stg-application/src/lib.rs:369:    energy_repo: Box<dyn EnergyRepository>,
+crates/stg-application/src/lib.rs:373:    pub fn new(energy_repo: Box<dyn EnergyRepository>) -> Self {
+crates/stg-application/src/lib.rs:374:        Self { energy_repo }
+crates/stg-application/src/lib.rs:378:        self.energy_repo.save_node(&node).await
+crates/stg-application/src/lib.rs:382:        let mut node = self.energy_repo.find_node_by_id(node_id).await?.ok_or(DomainError::EnergyNodeNotFound(node_id))?;
+crates/stg-application/src/lib.rs:387:        self.energy_repo.update_node(&node).await
+crates/stg-application/src/lib.rs:392:        match self.energy_repo.get_latest_state().await {
+crates/stg-application/src/lib.rs:453:        idempotency_key: Uuid,
+crates/stg-application/src/lib.rs:471:            idempotency_key,
+crates/stg-application/src/lib.rs:485:    energy_repo: Box<dyn EnergyRepository>,
+crates/stg-application/src/lib.rs:492:        energy_repo: Box<dyn EnergyRepository>,
+crates/stg-application/src/lib.rs:497:            energy_repo,
+crates/stg-application/src/lib.rs:504:        let current_state = self.energy_repo.get_latest_state().await?;
+crates/stg-application/src/lib.rs:505:        let active_nodes = self.energy_repo.list_active_nodes().await?;
+crates/stg-application/src/lib.rs:510:        self.energy_repo.save_state(&next_state).await?;
+crates/stg-application/src/lib.rs:512:        // If energy mode shifted, record an event and publish to queue
+crates/stg-application/src/lib.rs:541:        let mut node = self.energy_repo.find_node_by_id(node_uuid).await?
+crates/stg-application/src/lib.rs:551:        self.energy_repo.update_node(&node).await?;
+crates/stg-domain/src/lib.rs:191:    pub idempotency_key: Uuid,
+crates/stg-domain/src/lib.rs:203:        idempotency_key: Uuid,
+crates/stg-domain/src/lib.rs:222:            idempotency_key,
+crates/stg-infrastructure/src/lib.rs:330:        .bind(transaction.idempotency_key)
+crates/stg-infrastructure/src/lib.rs:400:        idempotency_key: Uuid,
+crates/stg-infrastructure/src/lib.rs:412:        // 1. Check idempotency log
+crates/stg-infrastructure/src/lib.rs:416:        .bind(idempotency_key)
+crates/stg-infrastructure/src/lib.rs:428:                    request_id: idempotency_key,
+crates/stg-infrastructure/src/lib.rs:435:                    request_id: idempotency_key,
+crates/stg-infrastructure/src/lib.rs:561:            idempotency_key,
+crates/stg-infrastructure/src/lib.rs:579:        .bind(economy_tx.idempotency_key)
+crates/stg-infrastructure/src/lib.rs:660:        // 11. Save processed request (idempotency payload)
+crates/stg-infrastructure/src/lib.rs:670:        .bind(idempotency_key)
+crates/stg-infrastructure/src/lib.rs:982:        idempotency_key: Uuid,
+crates/stg-infrastructure/src/lib.rs:991:        // 1. Check idempotency log
+crates/stg-infrastructure/src/lib.rs:995:        .bind(idempotency_key)
+crates/stg-infrastructure/src/lib.rs:1007:                    request_id: idempotency_key,
+crates/stg-infrastructure/src/lib.rs:1014:                    request_id: idempotency_key,
+crates/stg-infrastructure/src/lib.rs:1125:            idempotency_key,
+crates/stg-infrastructure/src/lib.rs:1139:            .bind(transaction.idempotency_key)
+crates/stg-infrastructure/src/lib.rs:1164:        // Save idempotency record
+crates/stg-infrastructure/src/lib.rs:1167:            .bind(idempotency_key)
+crates/stg-infrastructure/src/lib.rs:1238:            FROM energy_nodes
+crates/stg-infrastructure/src/lib.rs:1270:                    _ => return Err(DomainError::InternalStateError("Invalid energy node type in DB".to_string())),
+crates/stg-infrastructure/src/lib.rs:1299:            FROM energy_nodes
+crates/stg-infrastructure/src/lib.rs:1330:                _ => return Err(DomainError::InternalStateError("Invalid energy node type in DB".to_string())),
+crates/stg-infrastructure/src/lib.rs:1365:            INSERT INTO energy_nodes (id, node_type, server_id, region_id, display_name, enabled, capacity_watts, production_watts, consumption_watts, stored_wh, max_stored_wh, efficiency, health, revision, last_reported_at)
+crates/stg-infrastructure/src/lib.rs:1394:            UPDATE energy_nodes
+crates/stg-infrastructure/src/lib.rs:1653:CREATE TABLE IF NOT EXISTS energy_nodes (
+crates/stg-infrastructure/src/lib.rs:1669:    CONSTRAINT energy_non_negative CHECK (capacity_watts >= 0 AND production_watts >= 0 AND consumption_watts >= 0)
+crates/stg-proto/proto/stg_core.proto:111:    EnergyNodeObservation energy_observation = 4;
+crates/stg-proto/proto/stg_core.proto:124:    EnergyState energy_update = 12;
+crates/stg-proto/proto/stg_core.proto:299:  EnergyMode energy_mode = 2;
+crates/stg-proto/proto/stg_core.proto:544:  EnergyState energy = 3;
+crates/stg-server/src/main.rs:160:                            request_id: tx.idempotency_key.to_string(),
+crates/stg-server/src/main.rs:326:    let energy_repo = Arc::new(stg-infrastructure::PostgresEnergyRepository::new(pool.clone()));
+crates/stg-server/src/main.rs:327:    let energy_service = Arc::new(EnergySimulationService::new(
+crates/stg-server/src/main.rs:328:        energy_repo,
+crates/stg-server/src/main.rs:334:    let simulation_service = energy_service.clone();
+crates/stg-server/src/main.rs:342:                error!("CRITICAL: Error occurred inside energy simulation tick: {:?}", e);
+crates/stg-api/src/grpc/handlers.rs:27:    pub energy_service: Arc<EnergyService>,
+crates/stg-api/src/grpc/handlers.rs:141:        let idempotency_key = parse_uuid(&ctx.request_id)?;
+crates/stg-api/src/grpc/handlers.rs:149:            idempotency_key,
+crates/stg-api/src/grpc/handlers.rs:191:        let idempotency_key = parse_uuid(&ctx.request_id)?;
+crates/stg-api/src/grpc/handlers.rs:207:            idempotency_key,
+crates/stg-api/src/grpc/handlers.rs:262:        let idempotency_key = parse_uuid(&ctx.request_id)?;
+crates/stg-api/src/grpc/handlers.rs:267:            idempotency_key,
+crates/stg-api/src/grpc/handlers.rs:332:    async fn register_energy_node(
+crates/stg-api/src/grpc/handlers.rs:365:        self.energy_service.register_node(node.clone()).await.map_err(map_domain_error)?;
+crates/stg-api/src/grpc/handlers.rs:386:    async fn report_energy_observation(
+crates/stg-api/src/grpc/handlers.rs:395:        self.energy_service.report_observation(node_id, obs.observed_production_watts, obs.observed_consumption_watts, obs.observed_storage_wh)
+crates/stg-api/src/grpc/handlers.rs:404:    async fn get_energy_state(
+crates/stg-api/src/grpc/handlers.rs:408:        let state = self.energy_service.get_state().await.map_err(map_domain_error)?;
+crates/stg-api/src/grpc/handlers.rs:439:            energy_mode: stg_proto::stg::v1::EnergyMode::EnergyNormal.into(),
+crates/stg-api/src/grpc/handlers.rs:452:            energy: None,
+crates/stg-api/src/lib.rs:16:    energy_service: Arc<EnergyService>,
+crates/stg-api/src/lib.rs:24:        energy_service,
+--- Phase 10: gRPC Implementation Matrix ---
+45:    async fn connect(
+52:    async fn register_player(
+89:    async fn get_player_snapshot(
+125:    async fn transfer_money(
+177:    async fn prepare_resource_conversion(
+249:    async fn commit_resource_conversion(
+299:    async fn abort_resource_conversion(
+332:    async fn register_energy_node(
+386:    async fn report_energy_observation(
+404:    async fn get_energy_state(
+433:    async fn get_economy_state(
+445:    async fn get_world_snapshot(
+461:    async fn begin_transition(
+468:    async fn claim_transition(
+475:    async fn commit_transition(
+482:    async fn abort_transition(

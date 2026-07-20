@@ -1,0 +1,104 @@
+--- Phase 5-10 Audit Log ---
+crates/stg-application/src/lib.rs:    pub async fn transfer_money(
+crates/stg-server/src/main.rs:        match self.economy_service.transfer_money(
+crates/stg-api/src/grpc/handlers.rs:    async fn transfer_money(
+crates/stg-api/src/grpc/handlers.rs:        let tx = self.economy_service.transfer_money(
+crates/stg-application/src/lib.rs:47:    /// ensuring proper idempotency check with fingerprint, deterministic locking order,
+crates/stg-application/src/lib.rs:51:        idempotency_key: Uuid,
+crates/stg-application/src/lib.rs:102:        idempotency_key: Uuid,
+crates/stg-application/src/lib.rs:255:        idempotency_key: Uuid,
+crates/stg-application/src/lib.rs:284:        // Let's create a deterministic reservation ID based on idempotency_key to prevent duplicates.
+crates/stg-application/src/lib.rs:285:        let reservation_id = ReservationId(idempotency_key);
+crates/stg-application/src/lib.rs:344:        idempotency_key: Uuid,
+crates/stg-application/src/lib.rs:352:            idempotency_key,
+crates/stg-application/src/lib.rs:369:    energy_repo: Box<dyn EnergyRepository>,
+crates/stg-application/src/lib.rs:373:    pub fn new(energy_repo: Box<dyn EnergyRepository>) -> Self {
+crates/stg-application/src/lib.rs:374:        Self { energy_repo }
+crates/stg-application/src/lib.rs:378:        self.energy_repo.save_node(&node).await
+crates/stg-application/src/lib.rs:382:        let mut node = self.energy_repo.find_node_by_id(node_id).await?.ok_or(DomainError::EnergyNodeNotFound(node_id))?;
+crates/stg-application/src/lib.rs:387:        self.energy_repo.update_node(&node).await
+crates/stg-application/src/lib.rs:392:        match self.energy_repo.get_latest_state().await {
+crates/stg-application/src/lib.rs:453:        idempotency_key: Uuid,
+crates/stg-application/src/lib.rs:471:            idempotency_key,
+crates/stg-application/src/lib.rs:485:    energy_repo: Box<dyn EnergyRepository>,
+crates/stg-application/src/lib.rs:492:        energy_repo: Box<dyn EnergyRepository>,
+crates/stg-application/src/lib.rs:497:            energy_repo,
+crates/stg-application/src/lib.rs:504:        let current_state = self.energy_repo.get_latest_state().await?;
+crates/stg-application/src/lib.rs:505:        let active_nodes = self.energy_repo.list_active_nodes().await?;
+crates/stg-application/src/lib.rs:510:        self.energy_repo.save_state(&next_state).await?;
+crates/stg-application/src/lib.rs:512:        // If energy mode shifted, record an event and publish to queue
+crates/stg-application/src/lib.rs:541:        let mut node = self.energy_repo.find_node_by_id(node_uuid).await?
+crates/stg-application/src/lib.rs:551:        self.energy_repo.update_node(&node).await?;
+crates/stg-domain/src/lib.rs:191:    pub idempotency_key: Uuid,
+crates/stg-domain/src/lib.rs:203:        idempotency_key: Uuid,
+crates/stg-domain/src/lib.rs:222:            idempotency_key,
+crates/stg-infrastructure/src/lib.rs:330:        .bind(transaction.idempotency_key)
+crates/stg-infrastructure/src/lib.rs:400:        idempotency_key: Uuid,
+crates/stg-infrastructure/src/lib.rs:412:        // 1. Check idempotency log
+crates/stg-infrastructure/src/lib.rs:416:        .bind(idempotency_key)
+crates/stg-infrastructure/src/lib.rs:428:                    request_id: idempotency_key,
+crates/stg-infrastructure/src/lib.rs:435:                    request_id: idempotency_key,
+crates/stg-infrastructure/src/lib.rs:561:            idempotency_key,
+crates/stg-infrastructure/src/lib.rs:579:        .bind(economy_tx.idempotency_key)
+crates/stg-infrastructure/src/lib.rs:660:        // 11. Save processed request (idempotency payload)
+crates/stg-infrastructure/src/lib.rs:670:        .bind(idempotency_key)
+crates/stg-infrastructure/src/lib.rs:982:        idempotency_key: Uuid,
+crates/stg-infrastructure/src/lib.rs:991:        // 1. Check idempotency log
+crates/stg-infrastructure/src/lib.rs:995:        .bind(idempotency_key)
+crates/stg-infrastructure/src/lib.rs:1007:                    request_id: idempotency_key,
+crates/stg-infrastructure/src/lib.rs:1014:                    request_id: idempotency_key,
+crates/stg-infrastructure/src/lib.rs:1125:            idempotency_key,
+crates/stg-infrastructure/src/lib.rs:1139:            .bind(transaction.idempotency_key)
+crates/stg-infrastructure/src/lib.rs:1164:        // Save idempotency record
+crates/stg-infrastructure/src/lib.rs:1167:            .bind(idempotency_key)
+crates/stg-infrastructure/src/lib.rs:1238:            FROM energy_nodes
+crates/stg-infrastructure/src/lib.rs:1270:                    _ => return Err(DomainError::InternalStateError("Invalid energy node type in DB".to_string())),
+crates/stg-infrastructure/src/lib.rs:1299:            FROM energy_nodes
+crates/stg-infrastructure/src/lib.rs:1330:                _ => return Err(DomainError::InternalStateError("Invalid energy node type in DB".to_string())),
+crates/stg-infrastructure/src/lib.rs:1365:            INSERT INTO energy_nodes (id, node_type, server_id, region_id, display_name, enabled, capacity_watts, production_watts, consumption_watts, stored_wh, max_stored_wh, efficiency, health, revision, last_reported_at)
+crates/stg-infrastructure/src/lib.rs:1394:            UPDATE energy_nodes
+crates/stg-infrastructure/src/lib.rs:1653:CREATE TABLE IF NOT EXISTS energy_nodes (
+crates/stg-infrastructure/src/lib.rs:1669:    CONSTRAINT energy_non_negative CHECK (capacity_watts >= 0 AND production_watts >= 0 AND consumption_watts >= 0)
+crates/stg-proto/proto/stg_core.proto:111:    EnergyNodeObservation energy_observation = 4;
+crates/stg-proto/proto/stg_core.proto:124:    EnergyState energy_update = 12;
+crates/stg-proto/proto/stg_core.proto:299:  EnergyMode energy_mode = 2;
+crates/stg-proto/proto/stg_core.proto:544:  EnergyState energy = 3;
+crates/stg-server/src/main.rs:160:                            request_id: tx.idempotency_key.to_string(),
+crates/stg-server/src/main.rs:326:    let energy_repo = Arc::new(stg-infrastructure::PostgresEnergyRepository::new(pool.clone()));
+crates/stg-server/src/main.rs:327:    let energy_service = Arc::new(EnergySimulationService::new(
+crates/stg-server/src/main.rs:328:        energy_repo,
+crates/stg-server/src/main.rs:334:    let simulation_service = energy_service.clone();
+crates/stg-server/src/main.rs:342:                error!("CRITICAL: Error occurred inside energy simulation tick: {:?}", e);
+crates/stg-api/src/grpc/handlers.rs:27:    pub energy_service: Arc<EnergyService>,
+crates/stg-api/src/grpc/handlers.rs:141:        let idempotency_key = parse_uuid(&ctx.request_id)?;
+crates/stg-api/src/grpc/handlers.rs:149:            idempotency_key,
+crates/stg-api/src/grpc/handlers.rs:191:        let idempotency_key = parse_uuid(&ctx.request_id)?;
+crates/stg-api/src/grpc/handlers.rs:207:            idempotency_key,
+crates/stg-api/src/grpc/handlers.rs:262:        let idempotency_key = parse_uuid(&ctx.request_id)?;
+crates/stg-api/src/grpc/handlers.rs:267:            idempotency_key,
+crates/stg-api/src/grpc/handlers.rs:332:    async fn register_energy_node(
+crates/stg-api/src/grpc/handlers.rs:365:        self.energy_service.register_node(node.clone()).await.map_err(map_domain_error)?;
+crates/stg-api/src/grpc/handlers.rs:386:    async fn report_energy_observation(
+crates/stg-api/src/grpc/handlers.rs:395:        self.energy_service.report_observation(node_id, obs.observed_production_watts, obs.observed_consumption_watts, obs.observed_storage_wh)
+crates/stg-api/src/grpc/handlers.rs:404:    async fn get_energy_state(
+crates/stg-api/src/grpc/handlers.rs:408:        let state = self.energy_service.get_state().await.map_err(map_domain_error)?;
+crates/stg-api/src/grpc/handlers.rs:439:            energy_mode: stg_proto::stg::v1::EnergyMode::EnergyNormal.into(),
+crates/stg-api/src/grpc/handlers.rs:452:            energy: None,
+crates/stg-api/src/lib.rs:16:    energy_service: Arc<EnergyService>,
+crates/stg-api/src/lib.rs:24:        energy_service,
+45:    async fn connect(
+52:    async fn register_player(
+89:    async fn get_player_snapshot(
+125:    async fn transfer_money(
+177:    async fn prepare_resource_conversion(
+249:    async fn commit_resource_conversion(
+299:    async fn abort_resource_conversion(
+332:    async fn register_energy_node(
+386:    async fn report_energy_observation(
+404:    async fn get_energy_state(
+433:    async fn get_economy_state(
+445:    async fn get_world_snapshot(
+461:    async fn begin_transition(
+468:    async fn claim_transition(
+475:    async fn commit_transition(
+482:    async fn abort_transition(
